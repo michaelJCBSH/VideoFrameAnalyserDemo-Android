@@ -2,6 +2,7 @@ package com.bignerdranch.android.videoframeanalyser;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
@@ -141,7 +142,47 @@ public class RecordVideoFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_record_video, container, false);
         mTextureView = (TextureView) view.findViewById(R.id.texture);
+
+        mButtonVideo = (Button) view.findViewById(R.id.video);
+        mButtonVideo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mIsRecordingVideo) {
+                    stopRecordingVideo();
+                } else {
+                    startRecordingVideo();
+                }
+            }
+        });
         return view;
+    }
+
+    private void startRecordingVideo() {
+        try {
+            // UI
+            mButtonVideo.setText(R.string.stop);
+            mIsRecordingVideo = true;
+
+            // Start recording
+            mMediaRecorder.start();
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void stopRecordingVideo() {
+        // UI
+        mIsRecordingVideo = false;
+        mButtonVideo.setText(R.string.record);
+        // Stop recording
+        mMediaRecorder.stop();
+        mMediaRecorder.reset();
+        Activity activity = getActivity();
+        if (null != activity) {
+            Toast.makeText(activity, "Video saved: " + getVideoFile(activity),
+                    Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "Video saved: " + getVideoFile(activity));
+        }
     }
 
     private void openBackgroundThread() {
@@ -242,18 +283,11 @@ public class RecordVideoFragment extends Fragment {
                 }
                 StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-//                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-//                        width, height, mVideoSize);
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                        width, height, mVideoSize);
 
-                mPreviewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+//                mPreviewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
                 Log.d(TAG, "mPreviewSize width: " + mPreviewSize.getWidth() + " height: " + mPreviewSize.getHeight());
-//                int orientation = getResources().getConfiguration().orientation;
-//                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//                    mTextureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-//                } else {
-//                    mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
-//                }
-
                 mCameraId = cameraId;
                 return;
             }
@@ -325,6 +359,7 @@ public class RecordVideoFragment extends Fragment {
         if (null == activity) {
             return;
         }
+        mMediaRecorder.setPreviewDisplay();
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
