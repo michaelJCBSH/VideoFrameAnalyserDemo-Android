@@ -75,7 +75,7 @@ public class RecordVideoFragment extends Fragment {
     private boolean mIsRecordingVideo;
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
-    private AutoFitTextureView mTextureView;
+    private TextureView mTextureView;
     private Button mButtonVideo;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mPreviewSession;
@@ -140,7 +140,7 @@ public class RecordVideoFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_record_video, container, false);
-        mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+        mTextureView = (TextureView) view.findViewById(R.id.texture);
         return view;
     }
 
@@ -247,12 +247,12 @@ public class RecordVideoFragment extends Fragment {
 
                 mPreviewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
                 Log.d(TAG, "mPreviewSize width: " + mPreviewSize.getWidth() + " height: " + mPreviewSize.getHeight());
-                int orientation = getResources().getConfiguration().orientation;
-                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    mTextureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-                } else {
-                    mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
-                }
+//                int orientation = getResources().getConfiguration().orientation;
+//                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+//                    mTextureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+//                } else {
+//                    mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+//                }
 
                 mCameraId = cameraId;
                 return;
