@@ -40,6 +40,15 @@ public class MainActivityFragment extends Fragment {
                 startActivity(intent);
             }
         });
+
+        Button mListVideoButton = (Button) v.findViewById(R.id.analysisFrames_button);
+        mListVideoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getActivity(), ListVideoActivity.class);
+                startActivity(intent);
+            }
+        });
         return v;
 
     }

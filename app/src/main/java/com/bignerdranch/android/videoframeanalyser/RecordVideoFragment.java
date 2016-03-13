@@ -1,10 +1,12 @@
 package com.bignerdranch.android.videoframeanalyser;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -22,6 +24,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -259,7 +262,7 @@ public class RecordVideoFragment extends Fragment {
     }
 
     private void openBackgroundThread() {
-        mBackgroundThread =  new HandlerThread("background thread");
+        mBackgroundThread = new HandlerThread("background thread");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
         mHandler = new Handler(Looper.getMainLooper());
@@ -287,7 +290,7 @@ public class RecordVideoFragment extends Fragment {
 
 
         openBackgroundThread();
-        if(mTextureView.isAvailable()) {
+        if (mTextureView.isAvailable()) {
             setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
             transformImage(mTextureView.getWidth(), mTextureView.getHeight());
             openCamera();
@@ -312,6 +315,16 @@ public class RecordVideoFragment extends Fragment {
         CameraManager cameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
             mMediaRecorder = new MediaRecorder();
+            if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
             cameraManager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
