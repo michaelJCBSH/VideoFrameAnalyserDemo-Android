@@ -1,14 +1,10 @@
 package com.bignerdranch.android.videoframeanalyser;
 
-import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
-import android.content.Intent;
-import android.content.res.Configuration;
-import android.graphics.ImageFormat;
+import android.content.DialogInterface;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -20,21 +16,23 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.ImageReader;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.File;
@@ -77,7 +75,7 @@ public class RecordVideoFragment extends Fragment {
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
     private TextureView mTextureView;
-    private Button mButtonVideo;
+    private FloatingActionButton mButtonVideo;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mPreviewSession;
     private String mCameraId;
@@ -121,6 +119,10 @@ public class RecordVideoFragment extends Fragment {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
+            Activity activity = getActivity();
+            if (null != activity) {
+                showAlert("Camera error", "onDisconnected called");
+            }
         }
 
         @Override
@@ -130,7 +132,7 @@ public class RecordVideoFragment extends Fragment {
             mCameraDevice = null;
             Activity activity = getActivity();
             if (null != activity) {
-                activity.finish();
+                //showAlert("Camera error", "onError called");
             }
         }
 
@@ -143,7 +145,7 @@ public class RecordVideoFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_record_video, container, false);
         mTextureView = (TextureView) view.findViewById(R.id.texture);
 
-        mButtonVideo = (Button) view.findViewById(R.id.video);
+        mButtonVideo = (FloatingActionButton) view.findViewById(R.id.video);
         mButtonVideo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -160,7 +162,8 @@ public class RecordVideoFragment extends Fragment {
     private void startRecordingVideo() {
         try {
             // UI
-            mButtonVideo.setText(R.string.stop);
+
+            mButtonVideo.setImageResource(android.R.drawable.ic_media_pause);
             mIsRecordingVideo = true;
 
             // Start recording
@@ -173,15 +176,85 @@ public class RecordVideoFragment extends Fragment {
     private void stopRecordingVideo() {
         // UI
         mIsRecordingVideo = false;
-        mButtonVideo.setText(R.string.record);
-        // Stop recording
-        mMediaRecorder.stop();
-        mMediaRecorder.reset();
+        mButtonVideo.setImageResource(android.R.drawable.ic_media_play);
+
+        try {
+            mPreviewSession.stopRepeating();
+            mPreviewSession.abortCaptures();
+
+            mMediaRecorder.stop();
+            mMediaRecorder.reset();
+
+            if (null != mCameraDevice) {
+                mCameraDevice.close();
+                mCameraDevice = null;
+            }
+            if (null != mMediaRecorder) {
+                mMediaRecorder.release();
+                mMediaRecorder = null;
+            }
+            openCamera();
+//            restartPreview();
+
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
         Activity activity = getActivity();
         if (null != activity) {
             Toast.makeText(activity, "Video saved: " + getVideoFile(activity),
                     Toast.LENGTH_SHORT).show();
             Log.d(TAG, "Video saved: " + getVideoFile(activity));
+        }
+
+    }
+
+
+    private void restartPreview() {
+        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+            return;
+        }
+        try {
+            //setUpMediaRecorder();
+            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            assert texture != null;
+            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            List<Surface> surfaces = new ArrayList<Surface>();
+
+            Surface previewSurface = new Surface(texture);
+            surfaces.add(previewSurface);
+            mPreviewBuilder.addTarget(previewSurface);
+
+            Surface recorderSurface = mMediaRecorder.getSurface();
+            surfaces.add(recorderSurface);
+            mPreviewBuilder.addTarget(recorderSurface);
+
+            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+
+                @Override
+                public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+                    mPreviewSession = cameraCaptureSession;
+                    if (null == mCameraDevice) {
+                        return;
+                    }
+                    try {
+                        setUpCaptureRequestBuilder(mPreviewBuilder);
+                        mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, mBackgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+                    Activity activity = getActivity();
+                    if (null != activity) {
+                        Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
     }
 
@@ -228,10 +301,10 @@ public class RecordVideoFragment extends Fragment {
         Log.d(LIFE_TAG, "onPause() ");
 
         super.onPause();
-
+        closeBackgroundThread();
 
         closeCamera();
-        closeBackgroundThread();
+
 
     }
 
@@ -359,7 +432,7 @@ public class RecordVideoFragment extends Fragment {
         if (null == activity) {
             return;
         }
-        mMediaRecorder.setPreviewDisplay();
+        //mMediaRecorder.setPreviewDisplay();
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -502,6 +575,30 @@ public class RecordVideoFragment extends Fragment {
     }
 
 
+    private void showAlert(String title, String msg) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+
+        builder.setTitle(title)
+                .setMessage(msg)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        getActivity().finish();
+                    }
+                });
+                //.show();
+
+        AlertDialog dialog = builder.create();
+
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        WindowManager.LayoutParams wmlp = dialog.getWindow().getAttributes();
+
+        wmlp.gravity = Gravity.TOP | Gravity.LEFT;
+        wmlp.x = 100;   //x position
+        wmlp.y = 100;   //y position
+
+        dialog.show();
+    }
 }
 
 
