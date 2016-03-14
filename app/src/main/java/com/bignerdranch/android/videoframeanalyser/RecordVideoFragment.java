@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -38,6 +39,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -308,7 +310,7 @@ public class RecordVideoFragment extends Fragment {
 
     }
 
-    
+
     private void openCamera() {
         CameraManager cameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
@@ -356,12 +358,24 @@ public class RecordVideoFragment extends Fragment {
                     continue;
                 }
                 StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+                //mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+
+                mVideoSize = Collections.max(
+                        Arrays.asList(map.getOutputSizes(MediaRecorder.class)),
+                        new Comparator<Size>() {
+                            @Override
+                            public int compare(Size lhs, Size rhs) {
+                                return Long.signum(lhs.getWidth() * lhs.getHeight() -
+                                        rhs.getWidth() * rhs.getHeight());
+                            }
+                        }
+                );
+
                 mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                         width, height, mVideoSize);
 
 //                mPreviewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
-                Log.d(TAG, "mPreviewSize width: " + mPreviewSize.getWidth() + " height: " + mPreviewSize.getHeight());
+                Log.d(TAG, "mVideoSize width: " + mVideoSize.getWidth() + " height: " + mVideoSize.getHeight());
                 mCameraId = cameraId;
                 return;
             }

@@ -31,4 +31,9 @@ public class ListVideoActivity extends SingleFragmentActivity {
         }
 
     }
+
+    @Override
+    protected int getLayoutResId() {
+        return R.layout.activity_fragment_list_video;
+    }
 }
