@@ -38,10 +38,12 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 public class RecordVideoFragment extends Fragment {
     protected static final String LIFE_TAG = "life_RecordFragment";
     private static final String TAG = RecordVideoFragment.class.getSimpleName();
+    private File mCurrentVideoFile;
 
     public static Fragment getInstance() {
 
@@ -195,7 +198,7 @@ public class RecordVideoFragment extends Fragment {
                 mMediaRecorder.release();
                 mMediaRecorder = null;
             }
-            openCamera();
+            //openCamera();
 //            restartPreview();
 
         } catch (CameraAccessException e) {
@@ -203,9 +206,9 @@ public class RecordVideoFragment extends Fragment {
         }
         Activity activity = getActivity();
         if (null != activity) {
-            Toast.makeText(activity, "Video saved: " + getVideoFile(activity),
+            Toast.makeText(activity, "Video saved: " + mCurrentVideoFile,
                     Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "Video saved: " + getVideoFile(activity));
+            Log.d(TAG, "Video saved: " + mCurrentVideoFile);
         }
 
     }
@@ -451,7 +454,8 @@ public class RecordVideoFragment extends Fragment {
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mMediaRecorder.setOutputFile(getVideoFile(activity).getAbsolutePath());
+        mCurrentVideoFile = getVideoFile(activity);
+        mMediaRecorder.setOutputFile(mCurrentVideoFile.getAbsolutePath());
         mMediaRecorder.setVideoEncodingBitRate(10000000);
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
@@ -464,7 +468,8 @@ public class RecordVideoFragment extends Fragment {
     }
 
     private File getVideoFile(Context context) {
-        return new File(context.getExternalFilesDir(null), "video.mp4");
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        return new File(context.getExternalFilesDir(null), timeStamp + ".mp4");
     }
 
     private void setUpCaptureRequestBuilder(CaptureRequest.Builder builder) {

@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.io.File;
 
@@ -51,5 +52,12 @@ public class ListVideoFragment extends Fragment{
             super(context, android.R.layout.simple_expandable_list_item_1, videos);
         }
 
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View v = super.getView(position, convertView, parent);
+            TextView textView = (TextView) v.findViewById(android.R.id.text1);
+            textView.setText(getItem(position).getName());
+            return v;
+        }
     }
 }
