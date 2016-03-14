@@ -16,7 +16,7 @@ import android.widget.ImageView;
 /**
  * Created by JCBSH on 14/03/2016.
  */
-public class AnalyserFragment extends Fragment{
+public class AnalyserFragment extends Fragment implements ImageAdapter.RecyclerViewClickPositionInterface{
     public static final String EXTRA_VIDEO_FILE_PATH = "com.bignerdranch.android.videoframeanalyser.AnalyserFragment_video_file_path";
     private static final String TAG = AnalyserFragment.class.getSimpleName();
     private String mPath;
@@ -58,7 +58,7 @@ public class AnalyserFragment extends Fragment{
         GridLayoutManager layoutManager = new GridLayoutManager(getActivity(), 1);
         layoutManager.setOrientation(LinearLayoutManager.HORIZONTAL);
         mFrameRecyclerView.setLayoutManager(layoutManager);
-        RecyclerView.Adapter imageAdapter = new ImageAdapter(mRetriever);
+        RecyclerView.Adapter imageAdapter = new ImageAdapter(mRetriever, this);
         mFrameRecyclerView.setAdapter(imageAdapter);
 
 
@@ -74,5 +74,10 @@ public class AnalyserFragment extends Fragment{
             mRetriever.release();
             mRetriever = null;
         }
+    }
+
+    @Override
+    public void setImage(long time) {
+        mCurrentFrame.setImageBitmap(mRetriever.getFrameAtTime(time));
     }
 }
