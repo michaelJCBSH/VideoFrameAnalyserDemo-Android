@@ -71,6 +71,7 @@ public class RecordVideoFragment extends Fragment {
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
+    private boolean mFileUsedFlag;
     private Handler mHandler;
     private Size mPreviewSize;
     private Size mVideoSize;
@@ -189,6 +190,7 @@ public class RecordVideoFragment extends Fragment {
 
             mMediaRecorder.stop();
             mMediaRecorder.reset();
+            mFileUsedFlag = true;
 
             if (null != mCameraDevice) {
                 mCameraDevice.close();
@@ -198,7 +200,7 @@ public class RecordVideoFragment extends Fragment {
                 mMediaRecorder.release();
                 mMediaRecorder = null;
             }
-            //openCamera();
+            openCamera();
 //            restartPreview();
 
         } catch (CameraAccessException e) {
@@ -299,16 +301,21 @@ public class RecordVideoFragment extends Fragment {
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
+
     }
 
     @Override
     public void onPause() {
         Log.d(LIFE_TAG, "onPause() ");
 
+
         super.onPause();
         closeBackgroundThread();
 
         closeCamera();
+        if (mFileUsedFlag == false) {
+            mCurrentVideoFile.delete();
+        }
 
 
     }
@@ -469,6 +476,7 @@ public class RecordVideoFragment extends Fragment {
 
     private File getVideoFile(Context context) {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        mFileUsedFlag = false;
         return new File(context.getExternalFilesDir(null), timeStamp + ".mp4");
     }
 
