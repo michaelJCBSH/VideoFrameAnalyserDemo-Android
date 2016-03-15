@@ -31,7 +31,7 @@ import android.util.Log;
  * Thread restrictions are noted in the method descriptions.  The FrameCallback overrides should
  * only be called from the MoviePlayer.
  */
-public class SpeedControlCallback implements VideoDecoder.FrameCallback {
+public class SpeedControlCallback  {
     private static final String TAG = SpeedControlCallback.class.getSimpleName();
     private static final boolean CHECK_SLEEP_TIME = false;
 
@@ -39,19 +39,7 @@ public class SpeedControlCallback implements VideoDecoder.FrameCallback {
 
     private long mPrevPresentUsec;
     private long mPrevMonoUsec;
-    private long mFixedFrameDurationUsec;
-    private boolean mLoopReset;
 
-    /**
-     * Sets a fixed playback rate.  If set, this will ignore the presentation time stamp
-     * in the video file.  Must be called before playback thread starts.
-     */
-    public void setFixedPlaybackRate(int fps) {
-        mFixedFrameDurationUsec = ONE_MILLION / fps;
-    }
-
-    // runs on decode thread
-    @Override
     public void preRender(long presentationTimeUsec) {
         // For the first frame, we grab the presentation time from the video
         // and the current monotonic clock time.  For subsequent frames, we
@@ -68,20 +56,10 @@ public class SpeedControlCallback implements VideoDecoder.FrameCallback {
         } else {
             // Compute the desired time delta between the previous frame and this frame.
             long frameDelta;
-            if (mLoopReset) {
-                // We don't get an indication of how long the last frame should appear
-                // on-screen, so we just throw a reasonable value in.  We could probably
-                // do better by using a previous frame duration or some sort of average;
-                // for now we just use 30fps.
-                mPrevPresentUsec = presentationTimeUsec - ONE_MILLION / 30;
-                mLoopReset = false;
-            }
-            if (mFixedFrameDurationUsec != 0) {
-                // Caller requested a fixed frame rate.  Ignore PTS.
-                frameDelta = mFixedFrameDurationUsec;
-            } else {
-                frameDelta = presentationTimeUsec - mPrevPresentUsec;
-            }
+
+            frameDelta = presentationTimeUsec - mPrevPresentUsec;
+
+
             if (frameDelta < 0) {
                 Log.w(TAG, "Weird, video times went backward");
                 frameDelta = 0;
@@ -96,6 +74,7 @@ public class SpeedControlCallback implements VideoDecoder.FrameCallback {
                         "sec, capping at 5 sec");
                 frameDelta = 5 * ONE_MILLION;
             }
+
 
             long desiredUsec = mPrevMonoUsec + frameDelta;  // when we want to wake up
             long nowUsec = System.nanoTime() / 1000;
@@ -113,17 +92,10 @@ public class SpeedControlCallback implements VideoDecoder.FrameCallback {
                 if (sleepTimeUsec > 500000) {
                     sleepTimeUsec = 500000;
                 }
+
                 try {
-                    if (CHECK_SLEEP_TIME) {
-                        long startNsec = System.nanoTime();
-                        Thread.sleep(sleepTimeUsec / 1000, (int) (sleepTimeUsec % 1000) * 1000);
-                        long actualSleepNsec = System.nanoTime() - startNsec;
-                        Log.d(TAG, "sleep=" + sleepTimeUsec + " actual=" + (actualSleepNsec / 1000) +
-                                " diff=" + (Math.abs(actualSleepNsec / 1000 - sleepTimeUsec)) +
-                                " (usec)");
-                    } else {
-                        Thread.sleep(sleepTimeUsec / 1000, (int) (sleepTimeUsec % 1000) * 1000);
-                    }
+                    Thread.sleep(sleepTimeUsec / 1000, (int) (sleepTimeUsec % 1000) * 1000);
+
                 } catch (InterruptedException ie) {}
                 nowUsec = System.nanoTime() / 1000;
             }
@@ -133,14 +105,5 @@ public class SpeedControlCallback implements VideoDecoder.FrameCallback {
             mPrevMonoUsec += frameDelta;
             mPrevPresentUsec += frameDelta;
         }
-    }
-
-    // runs on decode thread
-    @Override
-    public void postRender() {}
-
-    @Override
-    public void loopReset() {
-        mLoopReset = true;
     }
 }
