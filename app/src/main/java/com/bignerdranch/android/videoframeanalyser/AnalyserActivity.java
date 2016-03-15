@@ -15,7 +15,7 @@ public class AnalyserActivity extends SingleFragmentActivity{
     protected Fragment createFragment() {
         String path = getIntent().getStringExtra(AnalyserFragment.EXTRA_VIDEO_FILE_PATH);
 
-        Fragment fragment = AnalyserFragment.getInstance(path);
+        Fragment fragment = AnalyserMediaCodecFragment.getInstance(path);
         return fragment;
     }
 
