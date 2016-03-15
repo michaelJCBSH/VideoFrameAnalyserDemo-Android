@@ -7,4 +7,9 @@
         android:orderInCategory="100"
         android:title="@string/play_video"
         app:showAsAction="ifRoom|withText"/>
+    <item
+        android:id="@+id/nextFrame"
+        android:orderInCategory="100"
+        android:title="@string/next_frame"
+        app:showAsAction="ifRoom|withText"/>
 </menu>

@@ -73,10 +73,15 @@ public class AnalyserMediaCodecFragment extends Fragment{
                 mBackgroundHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        mVideoDecoder.setGetNextFrameFlag(true);
                         mVideoDecoder.start();
                     }
                 });
 
+                return true;
+            case R.id.nextFrame:
+
+                mVideoDecoder.setGetNextFrameFlag(true);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

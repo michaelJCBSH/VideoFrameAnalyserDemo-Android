@@ -24,11 +24,14 @@ public class VideoDecoder {
     private MediaCodec mCodec;
     private MediaCodecInfo mCodecInfo;
     private MediaFormat mVideoFormat;
+    private boolean mGetNextFrameFlag;
+    private int mSampleSize;
 
 
     public VideoDecoder(String path) {
         mPath = path;
         mMediaExtractor = new MediaExtractor();
+        mGetNextFrameFlag = false;
     }
 
     public VideoDecoder(String path, TextureView textureView) {
@@ -85,30 +88,44 @@ public class VideoDecoder {
             boolean sawInputEOS = false;
             boolean sawOutputEOS = false;
             int frameCount = 0;
+            int timeStamp = -1;
             SpeedControlCallback callback = new SpeedControlCallback();
             while (!sawOutputEOS) {
                 int inputBufferId = mCodec.dequeueInputBuffer(200000);
                 if (inputBufferId >= 0) {
-                    ByteBuffer inputBuffer = mCodec.getInputBuffer(inputBufferId);
-                    // fill inputBuffer with valid data
-                    int sampleSize = mMediaExtractor.readSampleData(inputBuffer, 0);
-                    long presentationTimeUs = 0;
-                    if (sampleSize < 0) {
-                        sawInputEOS = true;
-                        sampleSize = 0;
+                    if (mGetNextFrameFlag == true) {
+                        ByteBuffer inputBuffer = mCodec.getInputBuffer(inputBufferId);
+                        // fill inputBuffer with valid data
+                        int sampleSize = mMediaExtractor.readSampleData(inputBuffer, 0);
+                        long presentationTimeUs = 0;
+                        if (sampleSize < 0) {
+                            sawInputEOS = true;
+                            sampleSize = 0;
+                        } else {
+                            presentationTimeUs = mMediaExtractor.getSampleTime();
+                        }
+
+                        mSampleSize = sampleSize;
+
+                        mCodec.queueInputBuffer(inputBufferId,
+                                0, //offset
+                                sampleSize,
+                                presentationTimeUs,
+                                sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
+
+
+                        if (!sawInputEOS) {
+                            mMediaExtractor.advance();
+                        }
+                        mGetNextFrameFlag = false;
                     } else {
-                        presentationTimeUs = mMediaExtractor.getSampleTime();
+                        mCodec.queueInputBuffer(inputBufferId,
+                                0, //offset
+                                0,
+                                0,
+                                MediaCodec.BUFFER_FLAG_CODEC_CONFIG);
                     }
 
-                    mCodec.queueInputBuffer(inputBufferId,
-                            0, //offset
-                            sampleSize,
-                            presentationTimeUs,
-                            sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
-
-                    if (!sawInputEOS) {
-                        mMediaExtractor.advance();
-                    }
                 }
 
                 MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
@@ -126,10 +143,12 @@ public class VideoDecoder {
                     Log.d(TAG, "frameCount: " + frameCount);
                     ++frameCount;
 
-                    if (callback != null) {
-                        callback.preRender(bufferInfo.presentationTimeUs);
+                    if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
+                        mCodec.releaseOutputBuffer(outputBufferId, false);
+                    } else {
+                        mCodec.releaseOutputBuffer(outputBufferId, bufferInfo.presentationTimeUs);
                     }
-                    mCodec.releaseOutputBuffer(outputBufferId, bufferInfo.presentationTimeUs);
+
 
                 } else if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     // Subsequent data will conform to new format.
@@ -137,8 +156,7 @@ public class VideoDecoder {
                     outputFormat = mCodec.getOutputFormat(); // option B
                 }
             }
-            mCodec.stop();
-            mCodec.release();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -173,8 +191,13 @@ public class VideoDecoder {
 
     public void release () {
         mMediaExtractor.release();
-        //mCodec.stop();
+        mCodec.stop();
         mCodec.release();
+        //mCodec.stop();
+        //mCodec.release();
     }
 
+    public void setGetNextFrameFlag(boolean getNextFrameFlag) {
+        mGetNextFrameFlag = getNextFrameFlag;
+    }
 }
