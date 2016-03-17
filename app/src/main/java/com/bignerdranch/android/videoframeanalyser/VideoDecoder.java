@@ -26,6 +26,7 @@ public class VideoDecoder {
     private MediaFormat mVideoFormat;
     private int mSampleSize;
     private int mFrameCount = 0;
+    private MyLock mMyLock;
 
 
     public VideoDecoder(String path) {
@@ -33,9 +34,10 @@ public class VideoDecoder {
         mMediaExtractor = new MediaExtractor();
     }
 
-    public VideoDecoder(String path, TextureView textureView) {
+    public VideoDecoder(String path, TextureView textureView, MyLock myLock) {
         this(path);
         mTextureView = textureView;
+        mMyLock = myLock;
     }
 
     public boolean prepare() {
@@ -121,12 +123,13 @@ public class VideoDecoder {
                     }
 
                     mSampleSize = sampleSize;
-
+                    //mMyLock.aquireLock();
                     mCodec.queueInputBuffer(inputBufferId,
                             0, //offset
                             sampleSize,
                             presentationTimeUs,
                             sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
+                    //mMyLock.unLock();
 
                 }
 
@@ -148,7 +151,15 @@ public class VideoDecoder {
                     mCodec.releaseOutputBuffer(outputBufferId, false);
                     sawOutputEOS = true;
                 } else {
-                    mCodec.releaseOutputBuffer(outputBufferId, bufferInfo.presentationTimeUs);
+                    mCodec.releaseOutputBuffer(outputBufferId, true);
+                    synchronized (this) {
+                        try {
+                            this.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
                 }
                 Log.d(TAG, "frameCount: " + frameCount);
                 ++frameCount;

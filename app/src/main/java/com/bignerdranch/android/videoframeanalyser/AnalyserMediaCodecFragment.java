@@ -18,6 +18,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import java.util.concurrent.locks.Lock;
+
 /**
  * Created by JCBSH on 15/03/2016.
  */
@@ -31,6 +33,8 @@ public class AnalyserMediaCodecFragment extends Fragment{
     private Handler mBackgroundHandler;
     private ImageView mFrameView;
     private Handler mHandler;
+    private Lock mLock;
+    private MyLock mMyLock;
 
     public static Fragment getInstance(String path) {
         Bundle bundle = new Bundle();
@@ -50,6 +54,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
         mPath = getArguments().getString(AnalyserFragment.EXTRA_VIDEO_FILE_PATH);
 
         Log.d(TAG, mPath);
+        mMyLock = new MyLock();
 
 
     }
@@ -110,12 +115,9 @@ public class AnalyserMediaCodecFragment extends Fragment{
                 });
                 return true;
             case R.id.nextFrame:
-                mBackgroundHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mVideoDecoder.next();
-                    }
-                });
+                synchronized (mVideoDecoder) {
+                    mVideoDecoder.notifyAll();
+                }
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -130,7 +132,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
 
         openBackgroundThread();
 
-        mVideoDecoder = new VideoDecoder(mPath, mTextureView);
+        mVideoDecoder = new VideoDecoder(mPath, mTextureView, mMyLock);
         mVideoDecoder.prepare();
         //mVideoDecoder.start();
     }
