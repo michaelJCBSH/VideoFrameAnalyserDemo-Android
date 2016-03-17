@@ -73,78 +73,69 @@ public class VideoDecoder {
     public void start() {
 
 
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
-            assert texture != null;
-            texture.setDefaultBufferSize(mVideoFormat.getInteger(MediaFormat.KEY_WIDTH),
-                    mVideoFormat.getInteger(MediaFormat.KEY_HEIGHT));
-            Surface surface = new Surface(texture);
-            mCodec.configure(mVideoFormat, surface, null, 0);
+        SurfaceTexture texture = mTextureView.getSurfaceTexture();
+        assert texture != null;
+        texture.setDefaultBufferSize(mVideoFormat.getInteger(MediaFormat.KEY_WIDTH),
+                mVideoFormat.getInteger(MediaFormat.KEY_HEIGHT));
+        Surface surface = new Surface(texture);
+        mCodec.configure(mVideoFormat, surface, null, 0);
 
-            //mCodec.configure(mVideoFormat, null, null, 0);
-            MediaFormat outputFormat = mCodec.getOutputFormat(); // option B
-            mCodec.start();
-            boolean sawInputEOS = false;
-            boolean sawOutputEOS = false;
-            int frameCount = 0;
-            int timeStamp = -1;
-            SpeedControlCallback callback = new SpeedControlCallback();
-            while (!sawOutputEOS) {
-                int inputBufferId = mCodec.dequeueInputBuffer(200000);
-                if (inputBufferId >= 0) {
-                        ByteBuffer inputBuffer = mCodec.getInputBuffer(inputBufferId);
-                        // fill inputBuffer with valid data
-                        int sampleSize = mMediaExtractor.readSampleData(inputBuffer, 0);
-                        long presentationTimeUs = 0;
-                        if (sampleSize < 0) {
-                            sawInputEOS = true;
-                            sampleSize = 0;
-                        } else {
-                            presentationTimeUs = mMediaExtractor.getSampleTime();
-                        }
-
-                        mSampleSize = sampleSize;
-
-                        mCodec.queueInputBuffer(inputBufferId,
-                                0, //offset
-                                sampleSize,
-                                presentationTimeUs,
-                                sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
-
-
-                        if (!sawInputEOS) {
-                            mMediaExtractor.advance();
-                        }
-                    }
-
+        //mCodec.configure(mVideoFormat, null, null, 0);
+        mCodec.start();
+        boolean sawInputEOS = false;
+        boolean sawOutputEOS = false;
+        int frameCount = 0;
+        int timeStamp = -1;
+        while (!sawOutputEOS) {
+            //Log.d(TAG, "frameCount: " + frameCount);
+            int inputBufferId = mCodec.dequeueInputBuffer(200000);
+            if (inputBufferId >= 0) {
+                //Log.d(TAG, "frameCount: " + frameCount);
+                ByteBuffer inputBuffer = mCodec.getInputBuffer(inputBufferId);
+                // fill inputBuffer with valid data
+                int sampleSize = mMediaExtractor.readSampleData(inputBuffer, 0);
+                long presentationTimeUs = 0;
+                if (sampleSize < 0) {
+                    sawInputEOS = true;
+                    sampleSize = 0;
+                } else {
+                    presentationTimeUs = mMediaExtractor.getSampleTime();
                 }
 
-                MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-                int outputBufferId = mCodec.dequeueOutputBuffer(bufferInfo, 200000);
-                if (outputBufferId >= 0) {
-                    //ByteBuffer outputBuffer = mCodec.getOutputBuffer(outputBufferId);
-                    //MediaFormat bufferFormat = mCodec.getOutputFormat(outputBufferId); // option A
+                mSampleSize = sampleSize;
 
-                    // bufferFormat is identical to outputFormat
-                    // outputBuffer is ready to be processed or rendered.
-                    if ((bufferInfo.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM)) {
-                        mCodec.releaseOutputBuffer(outputBufferId, false);
-                        sawOutputEOS = true;
-                    } else {
-                        mCodec.releaseOutputBuffer(outputBufferId, bufferInfo.presentationTimeUs);
-                    }
+                mCodec.queueInputBuffer(inputBufferId,
+                        0, //offset
+                        sampleSize,
+                        presentationTimeUs,
+                        sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
+
+
+                if (!sawInputEOS) {
+                    mMediaExtractor.advance();
+                }
+            }
+
+            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+            int outputBufferId = mCodec.dequeueOutputBuffer(bufferInfo, 200000);
+            if (outputBufferId >= 0) {
+                //ByteBuffer outputBuffer = mCodec.getOutputBuffer(outputBufferId);
+                //MediaFormat bufferFormat = mCodec.getOutputFormat(outputBufferId); // option A
+
+                // bufferFormat is identical to outputFormat
+                // outputBuffer is ready to be processed or rendered.
+                if ((bufferInfo.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM)) {
+                    mCodec.releaseOutputBuffer(outputBufferId, false);
+                    sawOutputEOS = true;
+                } else {
                     mCodec.releaseOutputBuffer(outputBufferId, bufferInfo.presentationTimeUs);
-//                    Log.d(TAG, "frameCount: " + frameCount);
-//                    ++frameCount;
-
-                } else if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    // Subsequent data will conform to new format.
-                    // Can ignore if using getOutputFormat(outputBufferId)
-                    outputFormat = mCodec.getOutputFormat(); // option B
                 }
+                Log.d(TAG, "frameCount: " + frameCount);
+                ++frameCount;
 
+            }
 
-
-
+        }
     }
 
     public MediaCodecInfo getMediaCodecInfo() {
