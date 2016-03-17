@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -26,6 +27,7 @@ import java.util.concurrent.locks.Lock;
 public class AnalyserMediaCodecFragment extends Fragment{
 
     private static final String TAG = AnalyserMediaCodecFragment.class.getSimpleName();
+    public static final int WHAT_GREYSCALE_BITMAP = 0;
     private String mPath;
     private VideoDecoder mVideoDecoder;
     private TextureView mTextureView;
@@ -132,7 +134,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
 
         openBackgroundThread();
 
-        mVideoDecoder = new VideoDecoder(mPath, mTextureView, mMyLock);
+        mVideoDecoder = new VideoDecoder(mPath, mTextureView, mMyLock, mHandler);
         mVideoDecoder.prepare();
         //mVideoDecoder.start();
     }
@@ -150,7 +152,36 @@ public class AnalyserMediaCodecFragment extends Fragment{
         mBackgroundThread =  new HandlerThread("background thread");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-        mHandler = new Handler(Looper.getMainLooper());
+        mHandler = new Handler(Looper.getMainLooper()) {
+
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+
+                switch (msg.what) {
+                    case WHAT_GREYSCALE_BITMAP:
+                        if (mFrameView == null) return;
+                        Bitmap bitmap = (Bitmap) msg.obj;
+//                    if (((BitmapDrawable)mJpegImageView.getDrawable()) != null) {
+//                        Bitmap bitmapOld = ((BitmapDrawable)mJpegImageView.getDrawable()).getBitmap();
+//                        if (bitmapOld != null && !bitmapOld.isRecycled())   {
+//                            bitmapOld.recycle();
+//                        }
+//                    }
+
+                        mFrameView.setImageBitmap(bitmap);
+                        //detail3DScan();
+
+                        //mReadyToTakePhotoFlag = true;
+                        break;
+                }
+
+
+            }
+
+
+        };
+
     }
 
     private void closeBackgroundThread() {
