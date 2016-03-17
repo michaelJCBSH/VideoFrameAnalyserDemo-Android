@@ -25,6 +25,7 @@ public class VideoDecoder {
     private MediaCodecInfo mCodecInfo;
     private MediaFormat mVideoFormat;
     private int mSampleSize;
+    private int mFrameCount = 0;
 
 
     public VideoDecoder(String path) {
@@ -82,6 +83,12 @@ public class VideoDecoder {
 
         //mCodec.configure(mVideoFormat, null, null, 0);
         mCodec.start();
+
+        startLoop();
+
+    }
+
+    private void startLoop() {
         boolean sawInputEOS = false;
         boolean sawOutputEOS = false;
         int frameCount = 0;
@@ -90,29 +97,42 @@ public class VideoDecoder {
             //Log.d(TAG, "frameCount: " + frameCount);
             int inputBufferId = mCodec.dequeueInputBuffer(200000);
             if (inputBufferId >= 0) {
-                //Log.d(TAG, "frameCount: " + frameCount);
-                ByteBuffer inputBuffer = mCodec.getInputBuffer(inputBufferId);
-                // fill inputBuffer with valid data
-                int sampleSize = mMediaExtractor.readSampleData(inputBuffer, 0);
-                long presentationTimeUs = 0;
-                if (sampleSize < 0) {
-                    sawInputEOS = true;
-                    sampleSize = 0;
-                } else {
-                    presentationTimeUs = mMediaExtractor.getSampleTime();
+                if (mFrameCount == 20) {
+                    long presentationTimeUs = mMediaExtractor.getSampleTime();
+
+                    mCodec.queueInputBuffer(inputBufferId,
+                            0, //offset
+                            0,
+                            presentationTimeUs,
+                            MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+
+                    mFrameCount++;
+                } else if (mFrameCount < 20){
+                    //Log.d(TAG, "frameCount: " + frameCount);
+                    ByteBuffer inputBuffer = mCodec.getInputBuffer(inputBufferId);
+                    // fill inputBuffer with valid data
+                    int sampleSize = mMediaExtractor.readSampleData(inputBuffer, 0);
+                    long presentationTimeUs = 0;
+                    if (sampleSize < 0) {
+                        sawInputEOS = true;
+                        sampleSize = 0;
+                    } else {
+                        presentationTimeUs = mMediaExtractor.getSampleTime();
+                    }
+
+                    mSampleSize = sampleSize;
+
+                    mCodec.queueInputBuffer(inputBufferId,
+                            0, //offset
+                            sampleSize,
+                            presentationTimeUs,
+                            sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
+
                 }
-
-                mSampleSize = sampleSize;
-
-                mCodec.queueInputBuffer(inputBufferId,
-                        0, //offset
-                        sampleSize,
-                        presentationTimeUs,
-                        sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
-
 
                 if (!sawInputEOS) {
                     mMediaExtractor.advance();
+                    mFrameCount++;
                 }
             }
 
@@ -136,6 +156,7 @@ public class VideoDecoder {
             }
 
         }
+
     }
 
     public MediaCodecInfo getMediaCodecInfo() {
@@ -173,6 +194,10 @@ public class VideoDecoder {
     }
 
     public void next() {
+        mFrameCount = 0;
+        mCodec.flush();
+        startLoop();
+
 
     }
 }
