@@ -1,9 +1,12 @@
 package com.bignerdranch.android.videoframeanalyser;
 
 import android.app.Fragment;
+import android.graphics.Bitmap;
+import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,6 +16,7 @@ import android.view.MenuItem;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 
 /**
  * Created by JCBSH on 15/03/2016.
@@ -25,6 +29,8 @@ public class AnalyserMediaCodecFragment extends Fragment{
     private TextureView mTextureView;
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
+    private ImageView mFrameView;
+    private Handler mHandler;
 
     public static Fragment getInstance(String path) {
         Bundle bundle = new Bundle();
@@ -54,6 +60,32 @@ public class AnalyserMediaCodecFragment extends Fragment{
         View v = inflater.inflate(R.layout.fragment_media_codec,container, false);
 
         mTextureView = (TextureView) v.findViewById(R.id.texture);
+        mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
+                Bitmap bitmap = mTextureView.getBitmap();
+                mFrameView.setImageBitmap(bitmap);
+
+            }
+        });
+
+        mFrameView = (ImageView) v.findViewById(R.id.frameView);
 
 
 
@@ -73,15 +105,17 @@ public class AnalyserMediaCodecFragment extends Fragment{
                 mBackgroundHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        mVideoDecoder.setGetNextFrameFlag(true);
                         mVideoDecoder.start();
                     }
                 });
-
                 return true;
             case R.id.nextFrame:
-
-                mVideoDecoder.setGetNextFrameFlag(true);
+                mBackgroundHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mVideoDecoder.next();
+                    }
+                });
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -114,6 +148,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
         mBackgroundThread =  new HandlerThread("background thread");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+        mHandler = new Handler(Looper.getMainLooper());
     }
 
     private void closeBackgroundThread() {
@@ -123,6 +158,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
             mBackgroundThread.join();
             mBackgroundThread = null;
             mBackgroundHandler = null;
+            mHandler = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
