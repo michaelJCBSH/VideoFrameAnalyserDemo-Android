@@ -117,9 +117,20 @@ public class AnalyserMediaCodecFragment extends Fragment{
                 });
                 return true;
             case R.id.nextFrame:
-                synchronized (mVideoDecoder) {
-                    mVideoDecoder.notifyAll();
-                }
+
+                mBackgroundHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        ExtractMpegFramesTest extractMpegFramesTest = new ExtractMpegFramesTest();
+                        try {
+                            extractMpegFramesTest.testExtractMpegFrames();
+                        } catch (Throwable throwable) {
+                            throwable.printStackTrace();
+                        }
+                    }
+                });
+
+
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

@@ -1,5 +1,3 @@
-package com.bignerdranch.android.videoframeanalyser;
-
 /*
  * Copyright 2013 The Android Open Source Project
  *
@@ -15,6 +13,8 @@ package com.bignerdranch.android.videoframeanalyser;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package com.bignerdranch.android.videoframeanalyser;
 
 import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
@@ -60,7 +60,7 @@ import java.nio.FloatBuffer;
  */
 public class ExtractMpegFramesTest extends AndroidTestCase {
     private static final String TAG = "ExtractMpegFramesTest";
-    private static final boolean VERBOSE = false;           // lots of logging
+    private static final boolean VERBOSE = true;           // lots of logging
 
     // where to find files (note: requires WRITE_EXTERNAL_STORAGE permission)
     private static final File FILES_DIR = Environment.getExternalStorageDirectory();
@@ -120,8 +120,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
         MediaCodec decoder = null;
         CodecOutputSurface outputSurface = null;
         MediaExtractor extractor = null;
-        int saveWidth = 640;
-        int saveHeight = 480;
 
         try {
             File inputFile = new File(FILES_DIR, INPUT_FILE);   // must be an absolute path
@@ -132,7 +130,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             }
 
             extractor = new MediaExtractor();
-            extractor.setDataSource(inputFile.toString());
+            extractor.setDataSource(inputFile.getPath());
             int trackIndex = selectTrack(extractor);
             if (trackIndex < 0) {
                 throw new RuntimeException("No video track found in " + inputFile);
@@ -146,7 +144,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             }
 
             // Could use width/height from the MediaFormat to get full-size frames.
-            outputSurface = new CodecOutputSurface(saveWidth, saveHeight);
+            outputSurface = new CodecOutputSurface(format.getInteger(MediaFormat.KEY_WIDTH), format.getInteger(MediaFormat.KEY_HEIGHT));
 
             // Create a MediaCodec decoder, and configure it with the MediaFormat from the
             // extractor.  It's very important to use the format from the extractor because
@@ -271,6 +269,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 
                     boolean doRender = (info.size != 0);
 
+
                     // As soon as we call releaseOutputBuffer, the buffer will be forwarded
                     // to SurfaceTexture to convert to a texture.  The API doesn't guarantee
                     // that the texture will be available before the call returns, so we
@@ -311,7 +310,8 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
      * By default, the Surface will be using a BufferQueue in asynchronous mode, so we
      * can potentially drop frames.
      */
-    private static class CodecOutputSurface implements SurfaceTexture.OnFrameAvailableListener {
+    private static class CodecOutputSurface
+            implements SurfaceTexture.OnFrameAvailableListener {
         private ExtractMpegFramesTest.STextureRender mTextureRender;
         private SurfaceTexture mSurfaceTexture;
         private Surface mSurface;
@@ -567,9 +567,10 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             try {
                 bos = new BufferedOutputStream(new FileOutputStream(filename));
                 Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+                Log.d(TAG, "Saved " + mWidth + "x" + mHeight + " frame as '" + filename + "'");
                 mPixelBuf.rewind();
                 bmp.copyPixelsFromBuffer(mPixelBuf);
-                bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
+                bmp.compress(Bitmap.CompressFormat.PNG, 100, bos);
                 bmp.recycle();
             } finally {
                 if (bos != null) bos.close();
