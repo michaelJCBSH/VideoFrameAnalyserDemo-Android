@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 
 //20131122: minor tweaks to saveFrame() I/O
 //20131205: add alpha to EGLConfig (huge glReadPixels speedup); pre-allocate pixel buffers;
@@ -286,7 +287,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 
                         if (decodeCount < MAX_FRAMES) {
                             File outputFile = new File(FILES_DIR,
-                                    String.format("frame-%02d.jpeg", decodeCount));
+                                    String.format("frame-%02d.png", decodeCount));
                             long startWhen = System.nanoTime();
                             outputSurface.saveFrame(outputFile.toString());
                             frameSaveTime += System.nanoTime() - startWhen;
@@ -374,7 +375,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             mSurface = new Surface(mSurfaceTexture);
 
             mPixelBuf = ByteBuffer.allocateDirect(mWidth * mHeight * 4);
-            mPixelBuf.order(ByteOrder.BIG_ENDIAN);
+            mPixelBuf.order(ByteOrder.LITTLE_ENDIAN);
         }
 
         /**
@@ -573,7 +574,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                 Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
                 mPixelBuf.rewind();
                 bmp.copyPixelsFromBuffer(mPixelBuf);
-                bmp.compress(Bitmap.CompressFormat.JPEG, 90, bos);
+                bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
                 bmp.recycle();
             } finally {
                 if (bos != null) bos.close();
@@ -599,10 +600,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
      * Code for rendering a texture onto a surface using OpenGL ES 2.0.
      */
     private static class STextureRender {
-        private static final int FLOAT_SIZE_BYTES = 4;
-        private static final int TRIANGLE_VERTICES_DATA_STRIDE_BYTES = 5 * FLOAT_SIZE_BYTES;
-        private static final int TRIANGLE_VERTICES_DATA_POS_OFFSET = 0;
-        private static final int TRIANGLE_VERTICES_DATA_UV_OFFSET = 3;
         private final float[] mTriangleVerticesData = {
                 // X, Y, Z, U, V
                 -1.0f, -1.0f, 0, 0.f, 0.f,
@@ -611,7 +608,71 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                 1.0f,  1.0f, 0, 1.f, 1.f,
         };
 
+        private static float squareSize = 1.0f;
+        private static float squareCoords[] = {
+                -squareSize,  squareSize, 0.0f,   // top left
+                -squareSize, -squareSize, 0.0f,   // bottom left
+                squareSize, -squareSize, 0.0f,   // bottom right
+                squareSize,  squareSize, 0.0f }; // top right
+
+
+        private FloatBuffer textureBuffer;
+        private float textureCoords[] = { 0.0f, 1.0f, 0.0f, 1.0f,
+                0.0f, 0.0f, 0.0f, 1.0f,
+                1.0f, 0.0f, 0.0f, 1.0f,
+                1.0f, 1.0f, 0.0f, 1.0f };
+
         private FloatBuffer mTriangleVertices;
+
+
+
+        private float[] mMVPMatrix = new float[16];
+        private float[] mSTMatrix = new float[16];
+
+        private int mProgram;
+        private int mTextureID = -12345;
+        private int muMVPMatrixHandle;
+        private int muSTMatrixHandle;
+        private int maPositionHandle;
+        private int maTextureHandle;
+
+        private static short drawOrder[] = { 0, 1, 2, 0, 2, 3};
+        private ShortBuffer drawListBuffer;
+        public STextureRender() {
+
+            mTriangleVertices = ByteBuffer.allocateDirect(
+                    mTriangleVerticesData.length * 4)
+                    .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            mTriangleVertices.put(mTriangleVerticesData).position(0);
+
+            Matrix.setIdentityM(mSTMatrix, 0);
+
+
+            ByteBuffer texturebb = ByteBuffer.allocateDirect(textureCoords.length * 4);
+            texturebb.order(ByteOrder.nativeOrder());
+
+            textureBuffer = texturebb.asFloatBuffer();
+            textureBuffer.put(textureCoords);
+            textureBuffer.position(0);
+
+
+            ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder. length * 2);
+            dlb.order(ByteOrder.nativeOrder());
+            drawListBuffer = dlb.asShortBuffer();
+            drawListBuffer.put(drawOrder);
+            drawListBuffer.position(0);
+
+
+            Matrix.setIdentityM(mSTMatrix, 0);
+        }
+
+        public int getTextureId() {
+            return mTextureID;
+        }
+
+        /**
+         * Draws the external texture in SurfaceTexture onto the current EGL surface.
+         */
 
         private static final String VERTEX_SHADER =
                 "uniform mat4 uMVPMatrix;\n" +
@@ -633,72 +694,62 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                         "    gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
                         "}\n";
 
-        private float[] mMVPMatrix = new float[16];
-        private float[] mSTMatrix = new float[16];
-
-        private int mProgram;
-        private int mTextureID = -12345;
-        private int muMVPMatrixHandle;
-        private int muSTMatrixHandle;
-        private int maPositionHandle;
-        private int maTextureHandle;
-
-        public STextureRender() {
-            mTriangleVertices = ByteBuffer.allocateDirect(
-                    mTriangleVerticesData.length * FLOAT_SIZE_BYTES)
-                    .order(ByteOrder.nativeOrder()).asFloatBuffer();
-            mTriangleVertices.put(mTriangleVerticesData).position(0);
-
-            Matrix.setIdentityM(mSTMatrix, 0);
-        }
-
-        public int getTextureId() {
-            return mTextureID;
-        }
-
-        /**
-         * Draws the external texture in SurfaceTexture onto the current EGL surface.
-         */
         public void drawFrame(SurfaceTexture st, boolean invert) {
-            checkGlError("onDrawFrame start");
             st.getTransformMatrix(mSTMatrix);
-            if (invert) {
-                mSTMatrix[5] = -mSTMatrix[5];
-                mSTMatrix[13] = 1.0f - mSTMatrix[13];
-            }
-
-            // (optional) clear to green so we can see if we're failing to set pixels
+//            if (invert) {
+//                mSTMatrix[5] = -mSTMatrix[5];
+//                mSTMatrix[13] = 1.0f - mSTMatrix[13];
+//            }
             GLES20.glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-
             GLES20.glUseProgram(mProgram);
-            checkGlError("glUseProgram");
-
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTextureID);
-
-            mTriangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
+            mTriangleVertices.position(0);
             GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
-                    TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
-            checkGlError("glVertexAttribPointer maPosition");
+                    5*4, mTriangleVertices);
             GLES20.glEnableVertexAttribArray(maPositionHandle);
-            checkGlError("glEnableVertexAttribArray maPositionHandle");
-
-            mTriangleVertices.position(TRIANGLE_VERTICES_DATA_UV_OFFSET);
+            mTriangleVertices.position(3);
             GLES20.glVertexAttribPointer(maTextureHandle, 2, GLES20.GL_FLOAT, false,
-                    TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
-            checkGlError("glVertexAttribPointer maTextureHandle");
+                    5*4, mTriangleVertices);
             GLES20.glEnableVertexAttribArray(maTextureHandle);
-            checkGlError("glEnableVertexAttribArray maTextureHandle");
-
             Matrix.setIdentityM(mMVPMatrix, 0);
             GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
             GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);
-
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-            checkGlError("glDrawArrays");
-
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+
+//            // (optional) clear to green so we can see if we're failing to set pixels
+//            GLES20.glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+//            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+//
+//            GLES20.glUseProgram(mProgram);
+//            checkGlError("glUseProgram");
+//
+//
+//            GLES20.glEnableVertexAttribArray(maPositionHandle);
+//
+//            mTriangleVertices.position(0);
+//            GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false, 4 * 3, mTriangleVertices);
+//
+//            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTextureID);
+//            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+//
+//            GLES20.glUniform1i(muMVPMatrixHandle, 0);
+//
+//
+//            GLES20.glEnableVertexAttribArray(maTextureHandle);
+//
+//            GLES20.glVertexAttribPointer(maTextureHandle, 4, GLES20.GL_FLOAT, false, 0, textureBuffer);
+//
+//            GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);
+//
+//
+//            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+//            GLES20.glDisableVertexAttribArray(maPositionHandle);
+//            GLES20.glDisableVertexAttribArray(maTextureHandle);
+//
+//            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
         }
 
         /**
