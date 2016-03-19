@@ -85,6 +85,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
             public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
                 Bitmap bitmap = mTextureView.getBitmap();
+                Log.d(TAG, "videoBlah: bitmap " + bitmap.getWidth() + "X" + bitmap.getHeight());
                 mFrameView.setImageBitmap(bitmap);
 
             }
@@ -110,7 +111,14 @@ public class AnalyserMediaCodecFragment extends Fragment{
                 mBackgroundHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        mVideoDecoder.start();
+
+                        ExtractMpegFramesTest test = new ExtractMpegFramesTest(mPath);
+                        try {
+                            test.testExtractMpegFrames();
+                        } catch (Throwable throwable) {
+                            throwable.printStackTrace();
+                        }
+                        //mVideoDecoder.start();
                     }
                 });
                 return true;

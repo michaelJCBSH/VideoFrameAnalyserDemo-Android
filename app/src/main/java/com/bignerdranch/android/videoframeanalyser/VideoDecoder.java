@@ -50,6 +50,8 @@ public class VideoDecoder {
                 Log.d(TAG, mime);
                 if (mime.startsWith("video/")) {
                     mMediaExtractor.selectTrack(i);
+                    Log.d(TAG, "videoBlah: " + format.getInteger(MediaFormat.KEY_WIDTH) + "X"
+                            + format.getInteger(MediaFormat.KEY_HEIGHT));
                     MediaCodecInfo codecInfo =  getMediaCodecInfo();
                     if (codecInfo == null) {
                         Log.d(TAG, "no MediaCodecInfo");
