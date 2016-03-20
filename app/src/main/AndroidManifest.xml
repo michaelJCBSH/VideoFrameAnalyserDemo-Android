@@ -34,6 +34,7 @@
         </activity>
         <activity
             android:name=".AnalyserActivity"
+            android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">
         </activity>
     </application>

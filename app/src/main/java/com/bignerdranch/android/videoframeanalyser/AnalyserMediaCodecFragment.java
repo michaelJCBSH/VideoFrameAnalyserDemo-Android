@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -53,7 +54,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
         setHasOptionsMenu(true);
         mPath = getArguments().getString(AnalyserFragment.EXTRA_VIDEO_FILE_PATH);
 
-        Log.d(TAG, mPath);
+        //Log.d(TAG, mPath);
         mMyLock = new MyLock();
 
 
@@ -112,7 +113,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
                     @Override
                     public void run() {
 
-                        ExtractMpegFramesTest test = new ExtractMpegFramesTest(mPath);
+                        ExtractMpegFramesTest test = new ExtractMpegFramesTest(mPath, mHandler);
                         try {
                             test.testExtractMpegFrames();
                         } catch (Throwable throwable) {
@@ -140,25 +141,55 @@ public class AnalyserMediaCodecFragment extends Fragment{
 
         openBackgroundThread();
 
-        mVideoDecoder = new VideoDecoder(mPath, mTextureView, mMyLock);
-        mVideoDecoder.prepare();
+//        mVideoDecoder = new VideoDecoder(mPath, mTextureView, mMyLock);
+        //mVideoDecoder.prepare();
         //mVideoDecoder.start();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        mVideoDecoder.release();
+//        mVideoDecoder.release();
 
         closeBackgroundThread();
     }
 
 
+    public static final int WHAT_GREYSCALE_BITMAP = 0;
+
     private void openBackgroundThread() {
         mBackgroundThread =  new HandlerThread("background thread");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-        mHandler = new Handler(Looper.getMainLooper());
+        mHandler = new Handler(Looper.getMainLooper()) {
+
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+
+                switch (msg.what) {
+                    case WHAT_GREYSCALE_BITMAP:
+                        if (mFrameView == null) return;
+                        Bitmap bitmap = (Bitmap) msg.obj;
+//                    if (((BitmapDrawable)mJpegImageView.getDrawable()) != null) {
+//                        Bitmap bitmapOld = ((BitmapDrawable)mJpegImageView.getDrawable()).getBitmap();
+//                        if (bitmapOld != null && !bitmapOld.isRecycled())   {
+//                            bitmapOld.recycle();
+//                        }
+//                    }
+
+                        mFrameView.setImageBitmap(bitmap);
+                        //detail3DScan();
+
+                        //mReadyToTakePhotoFlag = true;
+                        break;
+                }
+
+
+            }
+
+
+        };
     }
 
     private void closeBackgroundThread() {

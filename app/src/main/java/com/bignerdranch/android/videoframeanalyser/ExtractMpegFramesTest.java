@@ -30,6 +30,8 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.test.AndroidTestCase;
 import android.util.Log;
 import android.view.Surface;
@@ -64,10 +66,12 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 
     // where to find files (note: requires WRITE_EXTERNAL_STORAGE permission)
     private static final File FILES_DIR = Environment.getExternalStorageDirectory();
-    private static final String INPUT_FILE = "source.mp4";
-    private static final int MAX_FRAMES = 2;       // stop extracting after this many
+    private static final String INPUT_FILE = "source1.mp4";
+    private static final int MAX_FRAMES = 1;       // stop extracting after this many
+    private Handler uih;
 
-    public ExtractMpegFramesTest(String path) {
+    public ExtractMpegFramesTest(String path, Handler handler) {
+        uih = handler;
     }
 
     /** test entry point */
@@ -149,7 +153,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             }
 
             // Could use width/height from the MediaFormat to get full-size frames.
-            outputSurface = new CodecOutputSurface(saveWidth, saveHeight);
+            outputSurface = new CodecOutputSurface(saveWidth, saveHeight, uih);
 
             // Create a MediaCodec decoder, and configure it with the MediaFormat from the
             // extractor.  It's very important to use the format from the extractor because
@@ -316,6 +320,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
      */
     private static class CodecOutputSurface
             implements SurfaceTexture.OnFrameAvailableListener {
+        private final Handler uih;
         private ExtractMpegFramesTest.STextureRender mTextureRender;
         private SurfaceTexture mSurfaceTexture;
         private Surface mSurface;
@@ -336,13 +341,14 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
          * new EGL context and surface will be made current.  Creates a Surface that can be passed
          * to MediaCodec.configure().
          */
-        public CodecOutputSurface(int width, int height) {
+        public CodecOutputSurface(int width, int height, Handler uih) {
             if (width <= 0 || height <= 0) {
                 throw new IllegalArgumentException();
             }
             mWidth = width;
             mHeight = height;
 
+            this.uih = uih;
             eglSetup();
             makeCurrent();
             setup();
@@ -573,8 +579,13 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                 Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
                 mPixelBuf.rewind();
                 bmp.copyPixelsFromBuffer(mPixelBuf);
-                bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
-                bmp.recycle();
+
+
+                Message bitmapMessage = uih.obtainMessage(AnalyserMediaCodecFragment.WHAT_GREYSCALE_BITMAP
+                        , bmp);
+                bitmapMessage.sendToTarget();
+                //bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
+                //bmp.recycle();
             } finally {
                 if (bos != null) bos.close();
             }
@@ -662,21 +673,29 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 
         public void drawFrame(SurfaceTexture st, boolean invert) {
             st.getTransformMatrix(mSTMatrix);
-            for (int i = 0; i < 16; i+=4) {
-                Log.d(TAG, mSTMatrix[i] + ", " + mSTMatrix[i+1] + ", " + mSTMatrix[i+2] + ", " + mSTMatrix[i+3]);
+            for (int i = 0; i < 4; i++) {
+                Log.d(TAG, mSTMatrix[i] + ", " + mSTMatrix[i+4] + ", " + mSTMatrix[i+8] + ", " + mSTMatrix[i+12]);
             }
 
             if (invert) {
-                mSTMatrix[0] = mSTMatrix[1];
-                mSTMatrix[1] = 0.0f;
-                mSTMatrix[5] = -mSTMatrix[4];
-                mSTMatrix[4] = 0.0f;
-                //mSTMatrix[12] = 1.0f - mSTMatrix[12];
-                mSTMatrix[13] = 1.0f - mSTMatrix[13];
+
+//                mSTMatrix[5] = -mSTMatrix[5];
+//                mSTMatrix[13] = 1.0f - mSTMatrix[13];
+
+                mSTMatrix[0] = 0.0f;  mSTMatrix[4] = 1.0f;  mSTMatrix[8] = 0.0f;  mSTMatrix[12] = 0.0f;
+                mSTMatrix[1] = -1.0f;  mSTMatrix[5] = 0.0f;  mSTMatrix[9] = 0.0f;  mSTMatrix[13] = 1.0f;
+                mSTMatrix[2] = 0.0f;  mSTMatrix[6] = 0.0f; mSTMatrix[10] = 1.0f;  mSTMatrix[14] = 0.0f;
+                mSTMatrix[3] = 0.0f;  mSTMatrix[7] = 0.0f; mSTMatrix[11] = 0.0f;  mSTMatrix[15] = 1.0f;
+                //mSTMatrix[1] = -0.8f;
+
+                //mSTMatrix[4] = -0.8f;
+                //mSTMatrix[12] = 0.0f;
+                //mSTMatrix[13] = -(1.0f - mSTMatrix[13]);
             }
+
             Log.d(TAG, "followed");
-            for (int i = 0; i < 16; i+=4) {
-                Log.d(TAG, mSTMatrix[i] + ", " + mSTMatrix[i+1] + ", " + mSTMatrix[i+2] + ", " + mSTMatrix[i+3]);
+            for (int i = 0; i < 4; i++) {
+                Log.d(TAG, mSTMatrix[i] + ", " + mSTMatrix[i+4] + ", " + mSTMatrix[i+8] + ", " + mSTMatrix[i+12]);
             }
 
             Log.d(TAG,"-----------------------------");
