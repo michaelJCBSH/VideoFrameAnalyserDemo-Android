@@ -171,6 +171,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
                     case WHAT_GREYSCALE_BITMAP:
                         if (mFrameView == null) return;
                         Bitmap bitmap = (Bitmap) msg.obj;
+                        Log.d(TAG, bitmap.getWidth() + "X" + bitmap.getHeight());
 //                    if (((BitmapDrawable)mJpegImageView.getDrawable()) != null) {
 //                        Bitmap bitmapOld = ((BitmapDrawable)mJpegImageView.getDrawable()).getBitmap();
 //                        if (bitmapOld != null && !bitmapOld.isRecycled())   {
