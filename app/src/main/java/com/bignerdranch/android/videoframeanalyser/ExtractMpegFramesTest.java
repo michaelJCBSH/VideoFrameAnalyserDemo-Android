@@ -125,7 +125,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
         MediaExtractor extractor = null;
         int saveWidth = 1080;
         int saveHeight = 1920;
-
         try {
             File inputFile = new File(FILES_DIR, INPUT_FILE);   // must be an absolute path
             // The MediaExtractor error messages aren't very useful.  Check to see if the input
@@ -282,7 +281,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                     }
 
                     boolean doRender = (info.size != 0);
-
                     // As soon as we call releaseOutputBuffer, the buffer will be forwarded
                     // to SurfaceTexture to convert to a texture.  The API doesn't guarantee
                     // that the texture will be available before the call returns, so we
@@ -305,7 +303,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                 }
             }
         }
-
         frameSaveTime = System.nanoTime() - startWhen;
 
         //int numSaved = (MAX_FRAMES < decodeCount) ? MAX_FRAMES : decodeCount;
@@ -354,7 +351,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             }
             mWidth = width;
             mHeight = height;
-
             this.uih = uih;
             eglSetup();
             makeCurrent();
@@ -576,11 +572,9 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             // allocated ahead of time if possible.  We still get some allocations from the
             // Bitmap / PNG creation.
 
-
             mPixelBuf.rewind();
             GLES20.glReadPixels(0, 0, mWidth, mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE,
                     mPixelBuf);
-
             byte[] b = new byte[mWidth*mHeight*4];
             mPixelBuf.get(b);
 
@@ -630,10 +624,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                 1.0f,  1.0f, 0, 1.f, 1.f,
         };
 
-
         private FloatBuffer mTriangleVertices;
-
-
 
         private float[] mMVPMatrix = new float[16];
         private float[] mSTMatrix = new float[16];
@@ -646,7 +637,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
         private int maTextureHandle;
 
         public STextureRender() {
-
             mTriangleVertices = ByteBuffer.allocateDirect(
                     mTriangleVerticesData.length * 4)
                     .order(ByteOrder.nativeOrder()).asFloatBuffer();

@@ -19,6 +19,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -52,6 +53,8 @@ import java.util.concurrent.TimeUnit;
  * Created by JCBSH on 9/03/2016.
  */
 public class RecordVideoFragment extends Fragment {
+    private static final File FILES_DIR = Environment.getExternalStorageDirectory();
+    private static final String INPUT_FILE = "source.mp4";
     protected static final String LIFE_TAG = "life_RecordFragment";
     private static final String TAG = RecordVideoFragment.class.getSimpleName();
     private File mCurrentVideoFile;
@@ -475,9 +478,7 @@ public class RecordVideoFragment extends Fragment {
     }
 
     private File getVideoFile(Context context) {
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        mFileUsedFlag = false;
-        return new File(context.getExternalFilesDir(null), timeStamp + ".mp4");
+        return new File(FILES_DIR, INPUT_FILE);
     }
 
     private void setUpCaptureRequestBuilder(CaptureRequest.Builder builder) {

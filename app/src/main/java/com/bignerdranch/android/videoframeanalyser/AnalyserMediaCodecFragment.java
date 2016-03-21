@@ -27,6 +27,7 @@ import java.util.concurrent.locks.Lock;
 public class AnalyserMediaCodecFragment extends Fragment{
 
     private static final String TAG = AnalyserMediaCodecFragment.class.getSimpleName();
+    public static final int WHAT_GREYSCALE_BITMAP = 0;
     private String mPath;
     private VideoDecoder mVideoDecoder;
     private TextureView mTextureView;
@@ -124,9 +125,14 @@ public class AnalyserMediaCodecFragment extends Fragment{
                 });
                 return true;
             case R.id.nextFrame:
-                synchronized (mVideoDecoder) {
-                    mVideoDecoder.notifyAll();
-                }
+
+                mBackgroundHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                    }
+                });
+
+
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -140,7 +146,6 @@ public class AnalyserMediaCodecFragment extends Fragment{
         super.onResume();
 
         openBackgroundThread();
-
 //        mVideoDecoder = new VideoDecoder(mPath, mTextureView, mMyLock);
         //mVideoDecoder.prepare();
         //mVideoDecoder.start();
@@ -154,8 +159,6 @@ public class AnalyserMediaCodecFragment extends Fragment{
         closeBackgroundThread();
     }
 
-
-    public static final int WHAT_GREYSCALE_BITMAP = 0;
 
     private void openBackgroundThread() {
         mBackgroundThread =  new HandlerThread("background thread");
