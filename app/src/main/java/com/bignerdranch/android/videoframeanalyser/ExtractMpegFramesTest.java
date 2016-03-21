@@ -67,7 +67,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
     // where to find files (note: requires WRITE_EXTERNAL_STORAGE permission)
     private static final File FILES_DIR = Environment.getExternalStorageDirectory();
     private static final String INPUT_FILE = "source1.mp4";
-    private static final int MAX_FRAMES = 1;       // stop extracting after this many
+    private static final int MAX_FRAMES = 10;       // stop extracting after this many
     private Handler uih;
 
     public ExtractMpegFramesTest(String path, Handler handler) {
@@ -303,7 +303,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 
         int numSaved = (MAX_FRAMES < decodeCount) ? MAX_FRAMES : decodeCount;
         Log.d(TAG, "Saving " + numSaved + " frames took " +
-                (frameSaveTime / numSaved / 1000) + " us per frame");
+                (frameSaveTime / numSaved / 1000000) + " ms per frame");
     }
 
 
@@ -667,9 +667,23 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                         "precision mediump float;\n" +      // highp here doesn't seem to matter
                         "varying vec2 vTextureCoord;\n" +
                         "uniform samplerExternalOES sTexture;\n" +
+                        "vec3 rgb;\n" +
+                        "vec3 yuv;\n" +
+                        "vec3 av = vec3(0.3333,0.3333,0.3333);\n" +
                         "void main() {\n" +
-                        "    gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
+                        "    rgb = texture2D(sTexture, vTextureCoord).rgb;\n" +
+                        "    yuv = vec3(dot(rgb, av), dot(rgb, av), dot(rgb, av));\n" +
+                        "    gl_FragColor = vec4(yuv,1.0);\n" +
                         "}\n";
+
+//        private static final String FRAGMENT_SHADER =
+//                "#extension GL_OES_EGL_image_external : require\n" +
+//                        "precision mediump float;\n" +      // highp here doesn't seem to matter
+//                        "varying vec2 vTextureCoord;\n" +
+//                        "uniform samplerExternalOES sTexture;\n" +
+//                        "void main() {\n" +
+//                        "    gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
+//                        "}\n";
 
         public void drawFrame(SurfaceTexture st, boolean invert) {
             st.getTransformMatrix(mSTMatrix);
