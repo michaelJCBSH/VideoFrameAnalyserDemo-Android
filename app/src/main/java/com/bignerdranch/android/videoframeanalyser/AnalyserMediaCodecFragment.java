@@ -114,7 +114,7 @@ public class AnalyserMediaCodecFragment extends Fragment{
                     @Override
                     public void run() {
 
-                        ExtractMpegFramesTest test = new ExtractMpegFramesTest(mPath, mHandler);
+                        ExtractMpegFramesTest test = new ExtractMpegFramesTest(mPath, mHandler, getActivity());
                         try {
                             test.testExtractMpegFrames();
                         } catch (Throwable throwable) {

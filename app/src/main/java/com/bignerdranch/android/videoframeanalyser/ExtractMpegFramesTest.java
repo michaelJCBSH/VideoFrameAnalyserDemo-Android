@@ -16,6 +16,8 @@ package com.bignerdranch.android.videoframeanalyser;
  * limitations under the License.
  */
 
+import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
@@ -30,12 +32,15 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.test.AndroidTestCase;
 import android.util.Log;
 import android.view.Surface;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -62,12 +67,15 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 
     // where to find files (note: requires WRITE_EXTERNAL_STORAGE permission)
     private static final File FILES_DIR = Environment.getExternalStorageDirectory();
-    private static final String INPUT_FILE = "source1.mp4";
     private static final int MAX_FRAMES = 300;       // stop extracting after this many
+    private Context mAppContext;
+    private String mFilePath;
     private Handler uih;
 
-    public ExtractMpegFramesTest(String path, Handler handler) {
+    public ExtractMpegFramesTest(String path, Handler handler, Context context) {
         uih = handler;
+        mFilePath = path;
+        mAppContext = context;
     }
 
     /** test entry point */
@@ -126,7 +134,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
         int saveWidth = 1080;
         int saveHeight = 1920;
         try {
-            File inputFile = new File(FILES_DIR, INPUT_FILE);   // must be an absolute path
+            File inputFile = new File(mFilePath);   // must be an absolute path
             // The MediaExtractor error messages aren't very useful.  Check to see if the input
             // file exists so we can throw a better one if it's not there.
             if (!inputFile.canRead()) {
@@ -202,7 +210,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
     /**
      * Work loop.
      */
-    static void doExtract(MediaExtractor extractor, int trackIndex, MediaCodec decoder,
+    private void doExtract(MediaExtractor extractor, int trackIndex, MediaCodec decoder,
                           CodecOutputSurface outputSurface) throws IOException {
         final int TIMEOUT_USEC = 10000;
         ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
@@ -292,7 +300,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                         outputSurface.drawImage(true);
 
                         if (decodeCount < MAX_FRAMES) {
-                            File outputFile = new File(FILES_DIR,
+                            File outputFile = new File(mAppContext.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
                                     String.format("frame-%02d.png", decodeCount));
 
                             outputSurface.saveFrame(outputFile.toString());
@@ -575,29 +583,29 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             mPixelBuf.rewind();
             GLES20.glReadPixels(0, 0, mWidth, mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE,
                     mPixelBuf);
-            byte[] b = new byte[mWidth*mHeight*4];
-            mPixelBuf.get(b);
+//            byte[] b = new byte[mWidth*mHeight*4];
+//            mPixelBuf.get(b);
 
 
-//            BufferedOutputStream bos = null;
-//            try {
-//                bos = new BufferedOutputStream(new FileOutputStream(filename));
-//                Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
-//                mPixelBuf.rewind();
-//                bmp.copyPixelsFromBuffer(mPixelBuf);
-//
-//
-//                Message bitmapMessage = uih.obtainMessage(AnalyserMediaCodecFragment.WHAT_GREYSCALE_BITMAP
-//                        , bmp);
-//                bitmapMessage.sendToTarget();
-//                //bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
-//                //bmp.recycle();
-//            } finally {
-//                if (bos != null) bos.close();
-//            }
-//            if (VERBOSE) {
-//                Log.d(TAG, "Saved " + mWidth + "x" + mHeight + " frame as '" + filename + "'");
-//            }
+            BufferedOutputStream bos = null;
+            try {
+                bos = new BufferedOutputStream(new FileOutputStream(filename));
+                Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+                mPixelBuf.rewind();
+                bmp.copyPixelsFromBuffer(mPixelBuf);
+
+
+                Message bitmapMessage = uih.obtainMessage(AnalyserMediaCodecFragment.WHAT_GREYSCALE_BITMAP
+                        , bmp);
+                bitmapMessage.sendToTarget();
+                //bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
+                //bmp.recycle();
+            } finally {
+                if (bos != null) bos.close();
+            }
+            if (VERBOSE) {
+                Log.d(TAG, "Saved " + mWidth + "x" + mHeight + " frame as '" + filename + "'");
+            }
         }
 
         /**
