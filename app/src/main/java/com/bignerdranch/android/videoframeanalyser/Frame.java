@@ -3,6 +3,7 @@ package com.bignerdranch.android.videoframeanalyser;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
@@ -55,7 +56,7 @@ public class Frame {
 
         @Override
         public void run() {
-            while (true) {
+            while (!Thread.interrupted()) {
                 try {
                     //Log.d("FrameConsumer", "queue size "+ mQueue.size());
                     if (mNextFrameModeFlag) {
@@ -91,9 +92,12 @@ public class Frame {
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    Log.d("Frame", "VideoFrameConsumer runnable InterruptedException");
                     break;
                 }
             }
+
+            Log.d("Frame", "VideoFrameConsumer runnable finished");
         }
 
         public void setPlay(boolean play) {

@@ -288,6 +288,8 @@ public class ExtractMpegFrames {
                             Thread.sleep(50, 0);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
+                            Log.d(TAG, "remainingCapacity InterruptedException");
+                            return;
                         }
 
                     }

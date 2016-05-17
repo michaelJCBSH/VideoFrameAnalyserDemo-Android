@@ -153,24 +153,41 @@ public class AnalyserFragment extends Fragment {
 
     private void closeBackgroundThread() {
 
-        mFrameDeQueueThread.interrupt();
         mFrameQueueHandler.removeCallbacksAndMessages(null);
         mFrameQueueThread.interrupt();
-
-        if (th != null) th.interrupt();
-        mVideoDecoderThread.quitSafely();
         mFrameQueueThread.quitSafely();
-        mFrameDeQueueThread.quitSafely();
+
+        Log.d(TAG, "mFrameQueueThread quit");
         try {
             mFrameQueueThread.join();
             mFrameQueueThread = null;
+            mFrameQueueHandler = null;
+            Log.d(TAG, "closeBackgroundThread mFrameQueueThread");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        mFrameDeQueueThread.interrupt();
+        mFrameDeQueueThread.quitSafely();
+        Log.d(TAG, "mFrameDeQueueThread quit");
+        try {
             mFrameDeQueueThread.join();
             mFrameDeQueueThread = null;
+            mFrameDeQueueHandler = null;
+            Log.d(TAG, "closeBackgroundThread mFrameDeQueueThread");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
+
+
+        if (th != null) th.interrupt();
+        mVideoDecoderThread.quitSafely();
+        try {
             mVideoDecoderThread.join();
             mVideoDecoderThread = null;
             mVideoDecoderHandler = null;
-            mFrameQueueHandler = null;
-            mFrameDeQueueHandler = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -220,25 +237,29 @@ public class AnalyserFragment extends Fragment {
                 case WHAT_GREY_SCALE_BITMAP:
                     bitmap = (Bitmap) msg.obj;
                     final Frame frame = new Frame(bitmap);
-                    mFrameQueueHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            while (true){
-                                Log.d(TAG, "waiting to offer " +mQueue.remainingCapacity());
-                                try {
-                                    boolean b = mQueue.offer(frame, 100, TimeUnit.MILLISECONDS);
+                    if (mFrameQueueHandler != null) {
+                        mFrameQueueHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                while (true) {
+                                    Log.d(TAG, "waiting to offer " + mQueue.remainingCapacity());
+                                    try {
+                                        boolean b = mQueue.offer(frame, 100, TimeUnit.MILLISECONDS);
 
-                                    if (b) {
+                                        if (b) {
+                                            break;
+                                        }
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
                                         break;
                                     }
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                    break;
+
                                 }
 
+                                Log.d(TAG, "waiting to offer break");
                             }
-                        }
-                    });
+                        });
+                    }
                     break;
                 case WHAT_SET_IMAGE_BITMAP:
                     if (mFrameView == null) return;
