@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -65,7 +66,7 @@ public class AnalyserFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_analyser,container, false);
         mFrameView = (ImageView) v.findViewById(R.id.currentFrame);
-        //mFrameView.setVisibility(View.INVISIBLE);
+        mFrameView.setVisibility(View.INVISIBLE);
 
         mPlayVideoButton = (ImageButton) v.findViewById(R.id.play_video);
         mPlayVideoButton.setOnClickListener(new View.OnClickListener() {
@@ -198,7 +199,7 @@ public class AnalyserFragment extends Fragment {
 
 
     private void decodeVideo() {
-        //mFrameView.setVisibility(View.VISIBLE);
+        mFrameView.setVisibility(View.VISIBLE);
         mFrameDeQueueHandler.post(mVideoConsumer);
         mVideoDecoderHandler.post(new Runnable() {
             @Override
@@ -271,8 +272,13 @@ public class AnalyserFragment extends Fragment {
                     mFrameView.setImageBitmap(bitmap);
                     break;
                 case WHAT_VIDEO_FINISHED:
-                    //mFrameView.setVisibility(View.INVISIBLE);
+                    mFrameView.setVisibility(View.INVISIBLE);
+                    mPlayVideoButton.setImageResource(android.R.drawable.ic_media_play);
+                    mPlayingFlag = false;
                     mVideoFinishedFlag = true;
+
+                    mFrameView.setImageDrawable(null);
+                    Toast.makeText(getActivity(), "video has finished", Toast.LENGTH_SHORT).show();
                     break;
             }
         }
