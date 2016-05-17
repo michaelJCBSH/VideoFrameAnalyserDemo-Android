@@ -71,6 +71,7 @@ public class AnalyserFragment extends Fragment {
         mPlayVideoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mVideoConsumer.nextFrameModeEnable(false);
                 if (!mPlayingFlag) {
                     mVideoConsumer.setPlay(true);
                     if (mVideoFinishedFlag) {
@@ -78,8 +79,10 @@ public class AnalyserFragment extends Fragment {
                         mVideoFinishedFlag = false;
                     }
 
+                    mPlayVideoButton.setImageResource(android.R.drawable.ic_media_pause);
                     mPlayingFlag = true;
                 } else {
+                    mPlayVideoButton.setImageResource(android.R.drawable.ic_media_play);
                     mVideoConsumer.setPlay(false);
                     mPlayingFlag = false;
                 }

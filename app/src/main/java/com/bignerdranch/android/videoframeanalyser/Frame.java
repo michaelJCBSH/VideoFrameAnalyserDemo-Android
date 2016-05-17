@@ -77,6 +77,8 @@ public class Frame {
                     } else {
                         if (mPlay) {
                             Frame frame = mQueue.take();
+                            //33 FPS
+                            Thread.sleep(30);
                             if (frame.getBitmap() == null) {
                                 Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
                                 bitmapMessage.sendToTarget();
