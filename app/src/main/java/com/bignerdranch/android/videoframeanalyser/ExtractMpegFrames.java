@@ -69,7 +69,7 @@ public class ExtractMpegFrames {
     private Handler mUiHandler;
     private Context mAppContext;
     private String mFilePath;
-    private static BlockingQueue<Frame> mQueue;
+    private BlockingQueue<Frame> mQueue;
 
 
     public ExtractMpegFrames(String path, Context context, BlockingQueue<Frame> queue, Handler handler) {
@@ -282,6 +282,15 @@ public class ExtractMpegFrames {
                     // to SurfaceTexture to convert to a texture.  The API doesn't guarantee
                     // that the texture will be available before the call returns, so we
                     // need to wait for the onFrameAvailable callback to fire.
+                    while (mQueue.remainingCapacity() == 0){
+                        Log.d(TAG, "remainingCapacity = " + 0);
+                        try {
+                            Thread.sleep(50, 0);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
                     decoder.releaseOutputBuffer(decoderStatus, doRender);
                     if (doRender) {
                         if (VERBOSE) Log.d(TAG, "awaiting decode of frame " + decodeCount);
@@ -672,6 +681,7 @@ public class ExtractMpegFrames {
 //                        "    gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
 //                        "}\n";
 
+        private int x = 0;
         public void drawFrame(SurfaceTexture st, boolean invert) {
             st.getTransformMatrix(mSTMatrix);
 //            for (int i = 0; i < 4; i++) {
@@ -699,7 +709,7 @@ public class ExtractMpegFrames {
 //                Log.d(TAG, mSTMatrix[i] + ", " + mSTMatrix[i+4] + ", " + mSTMatrix[i+8] + ", " + mSTMatrix[i+12]);
 //            }
 
-            Log.d(TAG,"-----------------------------");
+            Log.d(TAG,"----------------------------- " + ++x);
 
             GLES20.glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);

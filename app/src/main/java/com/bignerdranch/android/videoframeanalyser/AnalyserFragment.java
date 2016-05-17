@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import java.util.concurrent.ArrayBlockingQueue;
@@ -24,9 +25,8 @@ import java.util.concurrent.TimeUnit;
 public class AnalyserFragment extends Fragment {
     public static final String EXTRA_VIDEO_FILE_PATH = "com.bignerdranch.android.videoframeanalyser.AnalyserFragment_video_file_path";
     private static final String TAG = AnalyserFragment.class.getSimpleName();
-    private String mPath;
-    private ImageView mFrameView;
-    private BlockingQueue<Frame> mQueue;
+    private Frame.VideoFrameConsumer mVideoConsumer;
+
 
     public static Fragment getInstance(String path) {
         Bundle bundle = new Bundle();
@@ -38,6 +38,14 @@ public class AnalyserFragment extends Fragment {
 
     }
 
+
+    private String mPath;
+    private ImageView mFrameView;
+    private boolean mPlayingFlag = false;
+    private boolean mVideoFinishedFlag = true;
+    private ImageButton mPlayVideoButton;
+    private ImageButton mNextFrameButton;
+    private BlockingQueue<Frame> mQueue;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -57,7 +65,41 @@ public class AnalyserFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_analyser,container, false);
         mFrameView = (ImageView) v.findViewById(R.id.currentFrame);
+        //mFrameView.setVisibility(View.INVISIBLE);
 
+        mPlayVideoButton = (ImageButton) v.findViewById(R.id.play_video);
+        mPlayVideoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!mPlayingFlag) {
+                    mVideoConsumer.setPlay(true);
+                    if (mVideoFinishedFlag) {
+                        decodeVideo();
+                        mVideoFinishedFlag = false;
+                    }
+
+                    mPlayingFlag = true;
+                } else {
+                    mVideoConsumer.setPlay(false);
+                    mPlayingFlag = false;
+                }
+
+            }
+        });
+
+        mNextFrameButton = (ImageButton) v.findViewById(R.id.next_frame);
+        mNextFrameButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mVideoFinishedFlag) {
+                    decodeVideo();
+                    mVideoFinishedFlag = false;
+                }
+
+                mVideoConsumer.nextFrameModeEnable(true);
+                mVideoConsumer.displayNextFrame(true);
+            }
+        });
 
 
 
@@ -68,7 +110,7 @@ public class AnalyserFragment extends Fragment {
     public void onResume() {
         super.onResume();
         openBackgroundThread();
-        decodeVideo();
+        //decodeVideo();
     }
 
     @Override
@@ -105,8 +147,8 @@ public class AnalyserFragment extends Fragment {
 
 
 
-        Frame.VideoFrameConsumer c1 = new Frame.VideoFrameConsumer(mQueue, mUiHandler);
-        mFrameDeQueueHandler.post(c1);
+        mVideoConsumer = new Frame.VideoFrameConsumer(mQueue, mUiHandler);
+
     }
 
     private void closeBackgroundThread() {
@@ -136,7 +178,8 @@ public class AnalyserFragment extends Fragment {
 
 
     private void decodeVideo() {
-        mFrameView.setVisibility(View.VISIBLE);
+        //mFrameView.setVisibility(View.VISIBLE);
+        mFrameDeQueueHandler.post(mVideoConsumer);
         mVideoDecoderHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -181,9 +224,10 @@ public class AnalyserFragment extends Fragment {
                         @Override
                         public void run() {
                             while (true){
-                                Log.d(TAG, "waiting to offer");
+                                Log.d(TAG, "waiting to offer " +mQueue.remainingCapacity());
                                 try {
                                     boolean b = mQueue.offer(frame, 100, TimeUnit.MILLISECONDS);
+
                                     if (b) {
                                         break;
                                     }
@@ -203,7 +247,8 @@ public class AnalyserFragment extends Fragment {
                     mFrameView.setImageBitmap(bitmap);
                     break;
                 case WHAT_VIDEO_FINISHED:
-                    mFrameView.setVisibility(View.INVISIBLE);
+                    //mFrameView.setVisibility(View.INVISIBLE);
+                    mVideoFinishedFlag = true;
                     break;
             }
         }

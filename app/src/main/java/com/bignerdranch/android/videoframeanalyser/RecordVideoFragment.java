@@ -80,7 +80,7 @@ public class RecordVideoFragment extends AbstractCameraFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_video_scan, container, false);
+        View view = inflater.inflate(R.layout.fragment_record_video, container, false);
         mScanPreViewTextureView = (TextureView) view.findViewById(R.id.texture);
 
 

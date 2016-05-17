@@ -13,6 +13,8 @@
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
     <string name="camera_error_alert_title">Camera error</string>
     <string name="next_frame">Next</string>
+    <string name="analysisFrames_button">Analysis Frames\nin greyscale</string>
+    <string name="recordVideo_button">Record Video</string>
 
 
 </resources>

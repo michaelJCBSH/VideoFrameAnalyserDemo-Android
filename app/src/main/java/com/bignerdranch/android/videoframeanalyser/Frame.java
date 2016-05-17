@@ -44,6 +44,9 @@ public class Frame {
     public static class VideoFrameConsumer implements Runnable {
         private Handler mUiHandler;
         private BlockingQueue<Frame> mQueue;
+        private boolean mPlay;
+        private boolean mNextFrameModeFlag = false;
+        private boolean mDisplayNextFlag = false;
 
         public VideoFrameConsumer(BlockingQueue<Frame> queue, Handler uiHandler) {
             mQueue = queue;;
@@ -55,21 +58,56 @@ public class Frame {
             while (true) {
                 try {
                     //Log.d("FrameConsumer", "queue size "+ mQueue.size());
-                    Frame frame = mQueue.take();
-                    if (frame.getBitmap() == null) {
-                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
-                        bitmapMessage.sendToTarget();
+                    if (mNextFrameModeFlag) {
+                        if (mDisplayNextFlag) {
+                            Frame frame = mQueue.take();
+                            if (frame.getBitmap() == null) {
+                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
+                                bitmapMessage.sendToTarget();
+                                break;
+                            } else {
+                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
+                                        , frame.getBitmap());
+                                bitmapMessage.sendToTarget();
+                            }
+                            mDisplayNextFlag = false;
+                        }
+
                     } else {
-                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
-                                , frame.getBitmap());
-                        bitmapMessage.sendToTarget();
+                        if (mPlay) {
+                            Frame frame = mQueue.take();
+                            if (frame.getBitmap() == null) {
+                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
+                                bitmapMessage.sendToTarget();
+                                break;
+                            } else {
+                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
+                                        , frame.getBitmap());
+                                bitmapMessage.sendToTarget();
+                            }
+                        }
                     }
+
+
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     break;
                 }
             }
         }
+
+        public void setPlay(boolean play) {
+            mPlay = play;
+        }
+
+        public void nextFrameModeEnable(boolean flag) {
+            mNextFrameModeFlag = flag;
+        }
+
+        public void displayNextFrame(boolean flag) {
+            mDisplayNextFlag = flag;
+        }
+
     }
 
 
