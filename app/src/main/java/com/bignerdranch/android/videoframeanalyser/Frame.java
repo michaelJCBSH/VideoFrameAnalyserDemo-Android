@@ -57,10 +57,10 @@ public class Frame {
                     //Log.d("FrameConsumer", "queue size "+ mQueue.size());
                     Frame frame = mQueue.take();
                     if (frame.getBitmap() == null) {
-                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_VIDEO_FINISHED);
+                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
                         bitmapMessage.sendToTarget();
                     } else {
-                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_SET_IMAGE_BITMAP
+                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
                                 , frame.getBitmap());
                         bitmapMessage.sendToTarget();
                     }
@@ -88,7 +88,7 @@ public class Frame {
                 try {
                     //Log.d("FrameConsumer", "queue size "+ mQueue.size());
                     Frame frame = mQueue.take();
-                    Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_SET_IMAGE_BITMAP
+                    Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
                             , frame.getBitmap());
                     bitmapMessage.sendToTarget();
                 } catch (InterruptedException e) {

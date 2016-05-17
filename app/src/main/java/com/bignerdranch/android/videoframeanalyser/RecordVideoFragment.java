@@ -41,7 +41,7 @@ import java.util.List;
 /**
  * Created by JCBSH on 31/03/2016.
  */
-public class RecordVideoFragment extends AbstractScanFragment{
+public class RecordVideoFragment extends AbstractCameraFragment {
 
     public static Fragment getInstance() {
 

@@ -41,6 +41,6 @@ public class AnalyserActivity extends SingleFragmentActivity{
     }
     @Override
     protected int getLayoutResId() {
-        return R.layout.activity_fragment_video_record;
+        return R.layout.activity_analyser;
     }
 }

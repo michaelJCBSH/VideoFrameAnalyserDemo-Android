@@ -47,7 +47,7 @@ import java.util.List;
 /**
  * Created by JCBSH on 1/04/2016.
  */
-abstract class AbstractScanFragment extends Fragment {
+abstract class AbstractCameraFragment extends Fragment {
 
 
     abstract protected String getFragmentTag();

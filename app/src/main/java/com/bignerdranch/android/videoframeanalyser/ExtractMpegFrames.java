@@ -272,7 +272,7 @@ public class ExtractMpegFrames {
                         if (VERBOSE) Log.d(TAG, "output EOS");
                         outputDone = true;
 
-                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_GREY_SCALE_BITMAP
+                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_GREY_SCALE_BITMAP
                                 , null);
                         bitmapMessage.sendToTarget();
                     }
@@ -578,7 +578,7 @@ public class ExtractMpegFrames {
             mPixelBuf.rewind();
             bmp.copyPixelsFromBuffer(mPixelBuf);
 
-            Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_GREY_SCALE_BITMAP
+            Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_GREY_SCALE_BITMAP
                     , bmp);
             bitmapMessage.sendToTarget();
             //bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
