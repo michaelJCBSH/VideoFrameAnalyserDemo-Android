@@ -33,18 +33,16 @@ import android.opengl.Matrix;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.test.AndroidTestCase;
 import android.util.Log;
 import android.view.Surface;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.concurrent.BlockingQueue;
 
 //20131122: minor tweaks to saveFrame() I/O
 //20131205: add alpha to EGLConfig (huge glReadPixels speedup); pre-allocate pixel buffers;
@@ -61,26 +59,25 @@ import java.nio.FloatBuffer;
  * (This was derived from bits and pieces of CTS tests, and is packaged as such, but is not
  * currently part of CTS.)
  */
-public class ExtractMpegFramesTest extends AndroidTestCase {
-    private static final String TAG = "ExtractMpegFramesTest";
+public class ExtractMpegFrames {
+    private static final String TAG = ExtractMpegFrames.class.getSimpleName();
     private static final boolean VERBOSE = false;           // lots of logging
 
     // where to find files (note: requires WRITE_EXTERNAL_STORAGE permission)
     private static final File FILES_DIR = Environment.getExternalStorageDirectory();
     private static final int MAX_FRAMES = 300;       // stop extracting after this many
+    private Handler mUiHandler;
     private Context mAppContext;
     private String mFilePath;
-    private Handler uih;
+    private static BlockingQueue<Frame> mQueue;
 
-    public ExtractMpegFramesTest(String path, Handler handler, Context context) {
-        uih = handler;
+
+    public ExtractMpegFrames(String path, Context context, BlockingQueue<Frame> queue, Handler handler) {
         mFilePath = path;
         mAppContext = context;
-    }
+        mQueue = queue;
+        mUiHandler= handler;
 
-    /** test entry point */
-    public void testExtractMpegFrames() throws Throwable {
-        ExtractMpegFramesWrapper.runTest(this);
     }
 
     /**
@@ -90,11 +87,11 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
      *
      * The wrapper propagates exceptions thrown by the worker thread back to the caller.
      */
-    private static class ExtractMpegFramesWrapper implements Runnable {
+    public static class ExtractMpegFramesRunnable implements Runnable {
         private Throwable mThrowable;
-        private ExtractMpegFramesTest mTest;
+        private ExtractMpegFrames mTest;
 
-        private ExtractMpegFramesWrapper(ExtractMpegFramesTest test) {
+        public ExtractMpegFramesRunnable(ExtractMpegFrames test) {
             mTest = test;
         }
 
@@ -104,17 +101,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                 mTest.extractMpegFrames();
             } catch (Throwable th) {
                 mThrowable = th;
-            }
-        }
-
-        /** Entry point. */
-        public static void runTest(ExtractMpegFramesTest obj) throws Throwable {
-            ExtractMpegFramesWrapper wrapper = new ExtractMpegFramesWrapper(obj);
-            Thread th = new Thread(wrapper, "codec test");
-            th.start();
-            th.join();
-            if (wrapper.mThrowable != null) {
-                throw wrapper.mThrowable;
             }
         }
     }
@@ -131,8 +117,6 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
         MediaCodec decoder = null;
         CodecOutputSurface outputSurface = null;
         MediaExtractor extractor = null;
-        int saveWidth = 1080;
-        int saveHeight = 1920;
         try {
             File inputFile = new File(mFilePath);   // must be an absolute path
             // The MediaExtractor error messages aren't very useful.  Check to see if the input
@@ -156,7 +140,8 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
             }
 
             // Could use width/height from the MediaFormat to get full-size frames.
-            outputSurface = new CodecOutputSurface(saveWidth, saveHeight, uih);
+
+            outputSurface = new CodecOutputSurface(format.getInteger(MediaFormat.KEY_HEIGHT), format.getInteger(MediaFormat.KEY_WIDTH), mUiHandler);
 
             // Create a MediaCodec decoder, and configure it with the MediaFormat from the
             // extractor.  It's very important to use the format from the extractor because
@@ -279,13 +264,17 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                     MediaFormat newFormat = decoder.getOutputFormat();
                     if (VERBOSE) Log.d(TAG, "decoder output format changed: " + newFormat);
                 } else if (decoderStatus < 0) {
-                    fail("unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus);
+                    Log.e(TAG, "unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus);
                 } else { // decoderStatus >= 0
                     if (VERBOSE) Log.d(TAG, "surface decoder given buffer " + decoderStatus +
                             " (size=" + info.size + ")");
                     if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                         if (VERBOSE) Log.d(TAG, "output EOS");
                         outputDone = true;
+
+                        Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_GREY_SCALE_BITMAP
+                                , null);
+                        bitmapMessage.sendToTarget();
                     }
 
                     boolean doRender = (info.size != 0);
@@ -300,10 +289,8 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
                         outputSurface.drawImage(true);
 
                         if (decodeCount < MAX_FRAMES) {
-                            File outputFile = new File(mAppContext.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
-                                    String.format("frame-%02d.png", decodeCount));
 
-                            outputSurface.saveFrame(outputFile.toString());
+                            outputSurface.extractFrame();
 
                         }
                         decodeCount++;
@@ -332,8 +319,8 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
      */
     private static class CodecOutputSurface
             implements SurfaceTexture.OnFrameAvailableListener {
-        private final Handler uih;
-        private ExtractMpegFramesTest.STextureRender mTextureRender;
+        private Handler mUiHandler;
+        private ExtractMpegFrames.STextureRender mTextureRender;
         private SurfaceTexture mSurfaceTexture;
         private Surface mSurface;
 
@@ -353,13 +340,13 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
          * new EGL context and surface will be made current.  Creates a Surface that can be passed
          * to MediaCodec.configure().
          */
-        public CodecOutputSurface(int width, int height, Handler uih) {
+        public CodecOutputSurface(int width, int height, Handler uiHandler) {
             if (width <= 0 || height <= 0) {
                 throw new IllegalArgumentException();
             }
             mWidth = width;
             mHeight = height;
-            this.uih = uih;
+            mUiHandler = uiHandler;
             eglSetup();
             makeCurrent();
             setup();
@@ -369,7 +356,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
          * Creates interconnected instances of TextureRender, SurfaceTexture, and Surface.
          */
         private void setup() {
-            mTextureRender = new ExtractMpegFramesTest.STextureRender();
+            mTextureRender = new ExtractMpegFrames.STextureRender();
             mTextureRender.surfaceCreated();
 
             if (VERBOSE) Log.d(TAG, "textureID=" + mTextureRender.getTextureId());
@@ -547,7 +534,7 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
         /**
          * Saves the current frame to disk as a PNG image.
          */
-        public void saveFrame(String filename) throws IOException {
+        public void extractFrame() throws IOException {
             // glReadPixels gives us a ByteBuffer filled with what is essentially big-endian RGBA
             // data (i.e. a byte of red, followed by a byte of green...).  To use the Bitmap
             // constructor that takes an int[] array with pixel data, we need an int[] filled
@@ -587,25 +574,15 @@ public class ExtractMpegFramesTest extends AndroidTestCase {
 //            mPixelBuf.get(b);
 
 
-            BufferedOutputStream bos = null;
-            try {
-                bos = new BufferedOutputStream(new FileOutputStream(filename));
-                Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
-                mPixelBuf.rewind();
-                bmp.copyPixelsFromBuffer(mPixelBuf);
+            Bitmap bmp = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+            mPixelBuf.rewind();
+            bmp.copyPixelsFromBuffer(mPixelBuf);
 
-
-                Message bitmapMessage = uih.obtainMessage(AnalyserMediaCodecFragment.WHAT_GREYSCALE_BITMAP
-                        , bmp);
-                bitmapMessage.sendToTarget();
-                //bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
-                //bmp.recycle();
-            } finally {
-                if (bos != null) bos.close();
-            }
-            if (VERBOSE) {
-                Log.d(TAG, "Saved " + mWidth + "x" + mHeight + " frame as '" + filename + "'");
-            }
+            Message bitmapMessage = mUiHandler.obtainMessage(AbstractScanFragment.WHAT_GREY_SCALE_BITMAP
+                    , bmp);
+            bitmapMessage.sendToTarget();
+            //bmp.compress(Bitmap.CompressFormat.PNG, 90, bos);
+            //bmp.recycle();
         }
 
         /**
