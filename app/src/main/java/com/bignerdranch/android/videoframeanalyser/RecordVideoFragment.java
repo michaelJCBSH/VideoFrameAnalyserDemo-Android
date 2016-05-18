@@ -355,14 +355,4 @@ public class RecordVideoFragment extends AbstractCameraFragment {
         return map.getOutputSizes(MediaRecorder.class);
     }
 
-    @Override
-    protected List<Surface> getCameraPreviewSurfaces() {
-        return null;
-    }
-
-    @Override
-    protected void captureStillImage() {
-
-    }
-
 }

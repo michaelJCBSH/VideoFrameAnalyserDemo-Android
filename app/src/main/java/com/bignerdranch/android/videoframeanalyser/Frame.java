@@ -116,34 +116,6 @@ public class Frame {
 
     }
 
-
-    public static class ImageFrameConsumer implements Runnable {
-        private Handler mUiHandler;
-        private BlockingQueue<Frame> mQueue;
-
-        public ImageFrameConsumer(BlockingQueue<Frame> queue, Handler uiHandler) {
-            mQueue = queue;;
-            mUiHandler = uiHandler;
-        }
-
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    //Log.d("FrameConsumer", "queue size "+ mQueue.size());
-                    Frame frame = mQueue.take();
-                    Message bitmapMessage = mUiHandler.obtainMessage(AnalyserFragment.WHAT_SET_IMAGE_BITMAP
-                            , frame.getBitmap());
-                    bitmapMessage.sendToTarget();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    break;
-                }
-            }
-
-        }
-    }
-
     public static class FrameComparator implements Comparator<Frame> {
 
         @Override

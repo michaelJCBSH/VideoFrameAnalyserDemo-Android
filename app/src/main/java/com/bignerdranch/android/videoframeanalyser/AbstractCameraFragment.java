@@ -52,8 +52,6 @@ abstract class AbstractCameraFragment extends Fragment {
     abstract protected TextureView getPreViewTextureView();
     abstract protected Size CaptureSizeSetup(StreamConfigurationMap map);
     abstract protected Size[] getAllCaptureTypeSizes(StreamConfigurationMap map);
-    abstract protected List<Surface> getCameraPreviewSurfaces();
-    abstract protected void captureStillImage();
     abstract protected void createCameraSession();
 
 
