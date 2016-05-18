@@ -63,11 +63,11 @@ public class Frame {
                         if (mDisplayNextFlag) {
                             Frame frame = mQueue.take();
                             if (frame.getBitmap() == null) {
-                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
+                                Message bitmapMessage = mUiHandler.obtainMessage(AnalyserFragment.WHAT_VIDEO_FINISHED);
                                 bitmapMessage.sendToTarget();
                                 break;
                             } else {
-                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
+                                Message bitmapMessage = mUiHandler.obtainMessage(AnalyserFragment.WHAT_SET_IMAGE_BITMAP
                                         , frame.getBitmap());
                                 bitmapMessage.sendToTarget();
                             }
@@ -80,11 +80,11 @@ public class Frame {
                             //33 FPS
                             Thread.sleep(30);
                             if (frame.getBitmap() == null) {
-                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_VIDEO_FINISHED);
+                                Message bitmapMessage = mUiHandler.obtainMessage(AnalyserFragment.WHAT_VIDEO_FINISHED);
                                 bitmapMessage.sendToTarget();
                                 break;
                             } else {
-                                Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
+                                Message bitmapMessage = mUiHandler.obtainMessage(AnalyserFragment.WHAT_SET_IMAGE_BITMAP
                                         , frame.getBitmap());
                                 bitmapMessage.sendToTarget();
                             }
@@ -132,7 +132,7 @@ public class Frame {
                 try {
                     //Log.d("FrameConsumer", "queue size "+ mQueue.size());
                     Frame frame = mQueue.take();
-                    Message bitmapMessage = mUiHandler.obtainMessage(AbstractCameraFragment.WHAT_SET_IMAGE_BITMAP
+                    Message bitmapMessage = mUiHandler.obtainMessage(AnalyserFragment.WHAT_SET_IMAGE_BITMAP
                             , frame.getBitmap());
                     bitmapMessage.sendToTarget();
                 } catch (InterruptedException e) {

@@ -12,10 +12,6 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
-import android.renderscript.RenderScript;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -26,8 +22,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.Toast;
-
-import com.bignerdranch.android.eora3d.ScriptC_saturation;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,20 +44,13 @@ public class RecordVideoFragment extends AbstractCameraFragment {
     }
 
     private static final String TAG = RecordVideoFragment.class.getSimpleName();
-    private static final String LIFE_TAG = "life_VideoScanFragment";
+    private static final String LIFE_TAG = "life_" + RecordVideoFragment.class.getSimpleName();
 
 
 
     private boolean mFileUsedFlag;
-    private boolean mIsRecordingVideo;
     private File mCurrentVideoFile;
     private ImageButton mButtonVideo;
-    private RenderScript mRS;
-    private ScriptC_saturation mScript;
-    private int mCaptureType;
-    private Thread th;
-    private Thread c1Thread;
-    private final UiHandler mUiHandler = new UiHandler(Looper.getMainLooper());
     private boolean mRecordingFlag = false;
 
 
@@ -72,8 +59,6 @@ public class RecordVideoFragment extends AbstractCameraFragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        mRS = RenderScript.create(getActivity());
-        mScript = new ScriptC_saturation(mRS);
     }
 
     private TextureView mScanPreViewTextureView;
@@ -121,38 +106,6 @@ public class RecordVideoFragment extends AbstractCameraFragment {
 
 
     }
-
-    private HandlerThread mVideoDecoderThread;
-    private Handler mVideoDecoderHandler;
-    @Override
-    protected void openBackgroundThread() {
-        super.openBackgroundThread();
-
-        mVideoDecoderThread = new HandlerThread("VideoDecoder background thread");
-        mVideoDecoderThread.start();
-        mVideoDecoderHandler = new Handler(mVideoDecoderThread.getLooper());
-    }
-
-    @Override
-    protected void closeBackgroundThread() {
-        super.closeBackgroundThread();
-
-        if (th != null) th.interrupt();
-        mVideoDecoderThread.quitSafely();
-        try {
-            mVideoDecoderThread.join();
-            mVideoDecoderThread = null;
-            mVideoDecoderHandler = null;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -283,7 +236,6 @@ public class RecordVideoFragment extends AbstractCameraFragment {
             // UI
 
             mButtonVideo.setImageResource(android.R.drawable.ic_media_pause);
-            mIsRecordingVideo = true;
 
             // Start recording
             mMediaRecorder.start();
@@ -295,7 +247,6 @@ public class RecordVideoFragment extends AbstractCameraFragment {
 
     private void stopRecordingVideo() {
         // UI
-        mIsRecordingVideo = false;
         mButtonVideo.setImageResource(android.R.drawable.ic_media_play);
 
         try {
@@ -319,7 +270,6 @@ public class RecordVideoFragment extends AbstractCameraFragment {
             mMediaRecorder = null;
         }
 
-        //decodeVideo();
         openCamera();
 
         Activity activity = getActivity();
@@ -331,24 +281,6 @@ public class RecordVideoFragment extends AbstractCameraFragment {
 
     }
 
-//    private void decodeVideo() {
-//        mFrameView.setVisibility(View.VISIBLE);
-//        mVideoDecoderHandler.post(new Runnable() {
-//            @Override
-//            public void run() {
-//                Log.d(TAG, "decodeVideo mCurrentVideoFile.getPath() " + mCurrentVideoFile.getPath());
-//                ExtractMpegFrames frameExtractor = new ExtractMpegFrames(mCurrentVideoFile.getPath(), getActivity(), mQueue, mUiHandler);
-//                try {
-//                    th = new Thread(new ExtractMpegFrames.ExtractMpegFramesRunnable(frameExtractor), "video frame decoder thread");;
-//                    th.start();
-//                    th.join();
-//                } catch (Throwable throwable) {
-//                    throwable.printStackTrace();
-//                }
-//            }
-//        });
-//
-//    }
 
     private void setUpMediaRecorder() throws IOException {
         final Activity activity = getActivity();

@@ -8,13 +8,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
@@ -24,7 +22,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.os.Message;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.util.Size;
@@ -461,10 +458,6 @@ abstract class AbstractCameraFragment extends Fragment {
     }
 
     protected void closeCamera() {
-        if(mCameraCaptureSession != null) {
-            mCameraCaptureSession.close();
-            mCameraCaptureSession = null;
-        }
         if(mCameraDevice != null) {
             mCameraDevice.close();
             mCameraDevice = null;
@@ -683,132 +676,6 @@ abstract class AbstractCameraFragment extends Fragment {
     }
 
 
-////---------------------------------------------////
-////---------------------------------------------////
-////             PREVIEW CREATION CODES          ////
-////---------------------------------------------////
-////---------------------------------------------////
-//    private static final int STATE_PREVIEW = 0;
-////    private static final int STATE__WAIT_LOCK = 1;
-////    private static final int STATE__PICTURE_CAPTURED = 2;
-//    private int mState = STATE_PREVIEW;
-
-    protected CameraCaptureSession mCameraCaptureSession;
-
-//    private CaptureRequest mPreviewCaptureRequest;
-//    private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
-//    private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
-//            private void process(CaptureResult result) {
-//                //Log.d(TAG, "process " + mState);
-//                switch(mState) {
-//                    case STATE_PREVIEW:
-//                        // Do nothing
-//                        break;
-//                    case STATE__WAIT_LOCK:
-//
-//                        Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
-//                        //Log.d(TAG, "process STATE__WAIT_LOCK " + afState);
-//                        //if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED) {
-//                        if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED ||
-//                                afState == CaptureRequest.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
-//                        /*
-//                        unLockFocus();
-//                        Toast.makeText(getApplicationContext(), "Focus Lock Successful", Toast.LENGTH_SHORT).show();
-//                        */
-//                            mState = STATE__PICTURE_CAPTURED;
-//                            captureStillImage();
-//                        }
-//                        break;
-//                }
-//            }
-//        @Override
-//        public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
-//            super.onCaptureStarted(session, request, timestamp, frameNumber);
-//        }
-//
-//        @Override
-//        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-//            super.onCaptureCompleted(session, request, result);
-//
-//            process(result);
-//        }
-//
-//        @Override
-//        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
-//            super.onCaptureFailed(session, request, failure);
-//
-//            Toast.makeText(getActivity().getApplicationContext(), "Focus Lock Unsuccessful", Toast.LENGTH_SHORT).show();
-//        }
-//    };
-
-//    protected void createCameraPreviewSession() {
-//        try {
-//            SurfaceTexture surfaceTexture = getPreViewTextureView().getSurfaceTexture();
-//            surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-//            Surface previewSurface = new Surface(surfaceTexture);
-//            mPreviewCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-//            mPreviewCaptureRequestBuilder.addTarget(previewSurface);
-//            ArrayList<Surface> targetSurfaces = new ArrayList<Surface>();
-//            targetSurfaces.add(previewSurface);
-//            mCameraDevice.createCaptureSession(targetSurfaces,
-//                    new CameraCaptureSession.StateCallback() {
-//                        @Override
-//                        public void onConfigured(CameraCaptureSession session) {
-//                            if (mCameraDevice == null) {
-//                                return;
-//                            }
-//                            try {
-//                                mPreviewCaptureRequest = mPreviewCaptureRequestBuilder.build();
-//                                mCameraCaptureSession = session;
-//                                mCameraCaptureSession.setRepeatingRequest(
-//                                        mPreviewCaptureRequest,
-//                                        mSessionCaptureCallback,
-//                                        mBackgroundHandler
-//                                );
-//                            } catch (CameraAccessException e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//
-//                        @Override
-//                        public void onConfigureFailed(CameraCaptureSession session) {
-//                            Toast.makeText(
-//                                    getActivity().getApplicationContext(),
-//                                    "create camera session failed!",
-//                                    Toast.LENGTH_SHORT
-//                            ).show();
-//                        }
-//                    }, null);
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
-//
-//    protected void lockFocus() {
-//        try {
-//            mState = STATE__WAIT_LOCK;
-//            mPreviewCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-//                    CaptureRequest.CONTROL_AF_TRIGGER_START);
-//            mCameraCaptureSession.capture(mPreviewCaptureRequestBuilder.build(),
-//                    mSessionCaptureCallback, mBackgroundHandler);
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    protected void unLockFocus() {
-//        try {
-//            mState = STATE_PREVIEW;
-//            mPreviewCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-//                    CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-//            mCameraCaptureSession.setRepeatingRequest(mPreviewCaptureRequestBuilder.build(),
-//                    mSessionCaptureCallback, mBackgroundHandler);
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     protected File getImageFile() {
         Activity activity = getActivity();
         if (activity == null) return null;
@@ -817,40 +684,4 @@ abstract class AbstractCameraFragment extends Fragment {
         return new File(getActivity().getExternalFilesDir(null), prepend);
     }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////UI HANDLER SECTION//////////////////////////////
-////////////////////////////////UI HANDLER SECTION//////////////////////////////
-////////////////////////////////UI HANDLER SECTION//////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-    public static final int WHAT_GREY_SCALE_BITMAP = 0;
-    public static final int WHAT_SET_IMAGE_BITMAP = 1;
-    public static final int WHAT_VIDEO_FINISHED = 2;
-    protected class UiHandler extends Handler {
-        public UiHandler(Looper mainLooper) {
-            super(mainLooper);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-
-            Bitmap bitmap = null;
-            switch (msg.what) {
-//                case WHAT_GREY_SCALE_BITMAP:
-//                    bitmap = (Bitmap) msg.obj;
-//
-//
-//                    break;
-//                case WHAT_SET_IMAGE_BITMAP:
-//                    if (getGreyScaleView() == null) return;
-//                    bitmap = (Bitmap) msg.obj;
-//                    Log.d(getFragmentTag(), "WHAT_SET_IMAGE_BITMAP   setImageBitmap");
-//                    getGreyScaleView().setImageBitmap(bitmap);
-//                    break;
-//                case WHAT_VIDEO_FINISHED:
-//                    getGreyScaleView().setVisibility(View.INVISIBLE);
-//                    break;
-            }
-        }
-    }
 }
