@@ -246,7 +246,7 @@ public class AnalyserFragment extends Fragment {
                             @Override
                             public void run() {
                                 while (true) {
-                                    Log.d(TAG, "waiting to offer " + mQueue.remainingCapacity());
+                                    //Log.d(TAG, "waiting to offer " + mQueue.remainingCapacity());
                                     try {
                                         boolean b = mQueue.offer(frame, 100, TimeUnit.MILLISECONDS);
 
@@ -260,7 +260,7 @@ public class AnalyserFragment extends Fragment {
 
                                 }
 
-                                Log.d(TAG, "waiting to offer break");
+                                //Log.d(TAG, "waiting to offer break");
                             }
                         });
                     }

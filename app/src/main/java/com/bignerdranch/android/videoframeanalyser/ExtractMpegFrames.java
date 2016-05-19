@@ -283,7 +283,7 @@ public class ExtractMpegFrames {
                     // that the texture will be available before the call returns, so we
                     // need to wait for the onFrameAvailable callback to fire.
                     while (mQueue.remainingCapacity() == 0){
-                        Log.d(TAG, "remainingCapacity = " + 0);
+                        //Log.d(TAG, "remainingCapacity = " + 0);
                         try {
                             Thread.sleep(50, 0);
                         } catch (InterruptedException e) {
